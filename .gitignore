@@ -3,6 +3,10 @@
 .env.*
 !.env.example
 
+# renenerated files
+node_modules/
+projects/
+
 # Local NEWO project data and state
 .newo/
 project/
