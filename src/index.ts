@@ -6,11 +6,11 @@ import Config           from './Config';
 import Client           from './Client';
 
 const argv = commandLineArgs([
-    { name: 'command',      alias: 'c', type: String, defaultValue: 'help', defaultOption: true },
-    { name: 'logLevel',     alias: 'l', type: Number, defaultValue: 2 },
-    { name: 'projectId',    alias: 'p', type: String, defaultValue: '' },
-    { name: 'includeHidden',alias: 'i', type: Boolean, defaultValue: true },
-    { name: 'attributeIdns',alias: 'a', type: String, defaultValue: '' },
+    { name: 'command',      alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
+    { name: 'logLevel',     alias: 'l', type: Number    , defaultValue: 0 },
+    { name: 'projectId',    alias: 'p', type: String    , defaultValue: '' },
+    { name: 'includeHidden',alias: 'i', type: Boolean   , defaultValue: true },
+    { name: 'attributeIdns',alias: 'a', type: String    , defaultValue: '' },
     { name: 'stringify',    alias: 's', type: Boolean },
 ]);
 
@@ -22,11 +22,11 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
 Usage:
     newo listProjects               # list all accessible projects
     newo getCustomerProfile         # get customer profile
-    newo getCustomerAttrs           # get project attributes (requires -p)
     newo getProject                 # get project (requires -p)
+    newo getCustomerAttrs           # get project attributes (requires -p)
 
 Common Flags:
-    --logLevel, -l                  # verobsity level 0..3 (default: 2)
+    --logLevel, -l                  # verbosity level 0..3 (default: 0)
     --stringify, -s                 # output result as JSON string
 
 getProject Flags:
@@ -35,6 +35,7 @@ getProject Flags:
 getCustomerAttrs Flags:
     --includeHidden, -i             # include hidden attributes
     --attributeIdns, -a             # optional comma-separated list of attribute IDNs to fetch
+
 Env:
     NEWO_BASE_URL                   # optional, default is https://app.newo.ai
     NEWO_API_KEY or NEWO_API_KEYS   # required, comma-separated list of API keys
@@ -87,7 +88,6 @@ Env:
                         })
                         .map( a => {
                             return {
-                                id      : a.id,
                                 idn     : a.idn,
                                 value   : a.value,
                             };

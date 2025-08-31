@@ -1,4 +1,3 @@
-import path     from 'node:path';
 import fs       from 'fs-extra';
 import * as axios from 'axios';
 
@@ -98,7 +97,7 @@ export default class Customer {
     }
     async getClient( config:Config ) : Promise<Client> {
         let accessToken = await this.getValidAccessToken(config);
-        config.log(2, `✓ Access token obtained`);
+        config.log(3,`✓ Access token obtained for key ending in ...${this.api_key.slice(-4)}`);
         const client = axios.default.create({
             baseURL: config.base_url,
             headers: { accept: 'application/json' }
@@ -122,9 +121,9 @@ export default class Customer {
                 if( config.log_level>2 ) {
                     config.log(1, `← ${r.status} ${r.config.method?.toUpperCase()} ${r.config.url}`);
                     if (r.data && Object.keys(r.data).length < 20) {
-                        config.log(1, '  Response:', JSON.stringify(r.data, null, 2));
+                        config.log(3, '  Response:', JSON.stringify(r.data, null, 2));
                     } else if (r.data) {
-                        config.log(1, `  Response: [${typeof r.data}] ${Array.isArray(r.data) ? r.data.length + ' items' : 'large object'}`);
+                        config.log(3, `  Response: [${typeof r.data}] ${Array.isArray(r.data) ? r.data.length + ' items' : 'large object'}`);
                     }
                 }
                 return r;

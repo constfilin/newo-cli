@@ -1,59 +1,59 @@
 {
-  "name": "newo",
-  "version": "1.4.0",
-  "description": "NEWO CLI: sync flows/skills between NEWO and local files, multi-project support, import AKB articles",
-  "type": "module",
-  "bin": {
-    "newo": "src/cli.js"
-  },
-  "files": [
-    "src/**/*.js",
-    "README.md",
-    "CHANGELOG.md",
-    ".env.example"
-  ],
-  "keywords": [
-    "newo",
-    "cli",
-    "ai",
-    "agent",
-    "automation",
-    "sync",
-    "local-development",
-    "akb",
-    "knowledge-base",
-    "import",
-    "multi-project",
-    "workspace"
-  ],
-  "author": "sabbah13, constfilin",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/sabbah13/newo-cli.git"
-  },
-  "bugs": {
-    "url": "https://github.com/sabbah13/newo-cli/issues"
-  },
-  "homepage": "https://github.com/sabbah13/newo-cli#readme",
-  "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "axios": "^1.7.7",
-    "command-line-args": "^6.0.1",
-    "dayjs": "^1.11.18",
-    "dotenv": "^16.4.5",
-    "fs-extra": "^11.2.0",
-    "js-yaml": "^4.1.0",
-    "minimist": "^1.2.8",
-    "tsx": "^4.20.5"
-  },
-  "devDependencies": {
-    "@types/node": "^24.3.0",
-    "mocha": "^10.2.0"
-  },
-  "scripts": {
-    "listProjects": "npx tsx ./src/index.ts -c listProjects"
-  }
+    "name": "newo",
+    "version": "1.4.0",
+    "description": "NEWO CLI: sync flows/skills between NEWO and local files, multi-project support, import AKB articles",
+    "type": "module",
+    "bin": {
+        "newo": "src/index.ts"
+    },
+    "files": [
+        "src/**/*.ts",
+        "README.md",
+        "CHANGELOG.md",
+        ".env.example"
+    ],
+    "keywords": [
+        "newo",
+        "cli",
+        "ai",
+        "agent",
+        "automation",
+        "sync",
+        "local-development",
+        "akb",
+        "knowledge-base",
+        "import",
+        "multi-project",
+        "workspace"
+    ],
+    "author": "sabbah13, constfilin",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/constfilin/newo-cli.git"
+    },
+    "bugs": {
+        "url": "https://github.com/constfilin/newo-cli/issues"
+    },
+    "homepage": "https://github.com/constfilin/newo-cli#readme",
+    "engines": {
+        "node": ">=18"
+    },
+    "dependencies": {
+        "axios": "^1.7.7",
+        "command-line-args": "^6.0.1",
+        "dayjs": "^1.11.18",
+        "dotenv": "^16.4.5",
+        "fs-extra": "^11.2.0",
+        "tsx": "^4.20.5"
+    },
+    "devDependencies": {
+        "@types/node": "^24.3.0",
+        "mocha": "^10.2.0"
+    },
+    "scripts": {
+        "listProjects": "npx tsx ./src/index.ts listProjects",
+        "getCustomerProfile": "npx tsx ./src/index.ts getCustomerProfile",
+        "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs"
+    }
 }

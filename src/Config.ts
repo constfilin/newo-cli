@@ -24,8 +24,8 @@ export default class Config {
 
     constructor( log_level?:number ) {
         dotenv.config();
-        this.log_level      = log_level ?? (process.env.NEWO_LOG_LEVEL ? parseInt(process.env.NEWO_LOG_LEVEL) : 1);
-        this.base_url       = process.env.NEWO_BASE_URL;
+        this.log_level      = log_level ?? 0;
+        this.base_url       = process.env.NEWO_BASE_URL||'https://app.newo.ai';
         this.state_dir      = path.join(process.env.NEWO_STATE_DIR||process.cwd(),'.newo');
         if( !saveStats(this.state_dir)?.isDirectory() )
             fs.mkdirSync(this.state_dir);
