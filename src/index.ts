@@ -58,6 +58,8 @@ Notes:
     switch( argv.command ) {
     case 'listProjects':
         return (() => Promise.all(clients.map(c=>c.listProjects())));
+    case 'getProject':
+        return (() => Promise.all(clients.map(c=>c.getProject(argv.projectId))));
     case 'getCustomerProfile':
         return (() => Promise.all(clients.map(c=>c.getCustomerProfile())));
     case 'getCustomerAttrs':
@@ -95,8 +97,6 @@ Notes:
                     })
             };
         })));
-    case 'getProject':
-        return (() => Promise.all(clients.map(c=>c.getProject(argv.projectId))));
     }
     return (() => { 
         throw Error(`Unknown command: '${argv.command}'. Use '${process.argv[1]} -c help' for usage.`);
