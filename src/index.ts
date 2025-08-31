@@ -3,7 +3,6 @@
 import commandLineArgs  from 'command-line-args'; 
 
 import Config           from './Config';
-import Customer         from './Customer';
 import Client           from './Client';
 
 const argv = commandLineArgs([
@@ -19,31 +18,28 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
     const config = new Config(argv.logLevel);
     if( argv.command==='help' )
         return () => {
-            config.log(1,`NEWO CLI
+            console.log(`NEWO CLI
 Usage:
     newo listProjects               # list all accessible projects
     newo getCustomerProfile         # get customer profile
     newo getCustomerAttrs           # get project attributes (requires -p)
     newo getProject                 # get project (requires -p)
 
-Flags:
+Common Flags:
     --logLevel, -l                  # verobsity level 0..3 (default: 2)
     --stringify, -s                 # output result as JSON string
-    --projectId, -p                 # project ID (optional, can also be set via NEWO_PROJECT_ID)
-    --includeHidden, -i             # include hidden attributes (for getCustomerAttrs)
-    --attributeIdns, -a             # optional comma-separated list of attribute IDNs to fetch (for getCustomerAttrs)
-Env:
-    NEWO_BASE_URL, NEWO_PROJECT_ID (optional), NEWO_API_KEY, NEWO_REFRESH_URL (optional)
 
-Notes:
-    - multi-project support: pull downloads all accessible projects or single project based on NEWO_PROJECT_ID
-    - If NEWO_PROJECT_ID is set, pull downloads only that project
-    - If NEWO_PROJECT_ID is not set, pull downloads all projects accessible with your API key
-    - Projects are stored in ./projects/{project-idn}/ folders
-    - Each project folder contains metadata.json and flows.yaml
+getProject Flags:
+    --projectId, -p                 # project Id (getProject only)
+
+getCustomerAttrs Flags:
+    --includeHidden, -i             # include hidden attributes
+    --attributeIdns, -a             # optional comma-separated list of attribute IDNs to fetch
+Env:
+    NEWO_BASE_URL                   # optional, default is https://app.newo.ai
+    NEWO_API_KEY or NEWO_API_KEYS   # required, comma-separated list of API keys
 `);
     };
-    const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
     const clients = await Promise.all(config.customers.map( c => {
         return c.getClient(config)
             .then( client => {
@@ -56,49 +52,51 @@ Notes:
     })) as Client[];
     config.log(1, `✓ Clients initialized for ${clients.length} customer(s)`);
     switch( argv.command ) {
-    case 'listProjects':
-        return (() => Promise.all(clients.map(c=>c.listProjects())));
-    case 'getProject':
-        return (() => Promise.all(clients.map(c=>c.getProject(argv.projectId))));
-    case 'getCustomerProfile':
-        return (() => Promise.all(clients.map(c=>c.getCustomerProfile())));
-    case 'getCustomerAttrs':
-        return (() => Promise.all(clients.map( async ( c ) => {
-            const [profile,attrs] = await Promise.all([
-                c.getCustomerProfile(),
-                c.getCustomerAttrs(argv.includeHidden).then( attrs => {
-                    if( attributeIdns.length>0 ) {
-                        const idns = argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0);
-                        return attrs.attributes.filter( a => attributeIdns.includes(a.idn) );
-                    }
-                    return attrs.attributes;
-                })
-            ]);
-            if( !attributeIdns.length )
-                return attrs;
-            // Else do special filtering and formatting
-            return {
-                profile : {
-                    id      : profile.id,
-                    idn     : profile.idn,
-                    name    : profile.name,
-                    email   : profile.email
-                },
-                attrs : attrs
-                    .filter( a => {
-                        return attributeIdns.includes(a.idn);
+        case 'listProjects':
+            return (() => Promise.all(clients.map(c=>c.listProjects())));
+        case 'getProject':
+            return (() => Promise.all(clients.map(c=>c.getProject(argv.projectId))));
+        case 'getCustomerProfile':
+            return (() => Promise.all(clients.map(c=>c.getCustomerProfile())));
+        case 'getCustomerAttrs': {
+            const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
+            return (() => Promise.all(clients.map( async ( c ) => {
+                const [profile,attrs] = await Promise.all([
+                    c.getCustomerProfile(),
+                    c.getCustomerAttrs(argv.includeHidden).then( attrs => {
+                        if( attributeIdns.length>0 ) {
+                            const idns = argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0);
+                            return attrs.attributes.filter( a => attributeIdns.includes(a.idn) );
+                        }
+                        return attrs.attributes;
                     })
-                    .map( a => {
-                        return {
-                            id      : a.id,
-                            idn     : a.idn,
-                            value   : a.value,
-                        };
-                    })
-            };
-        })));
+                ]);
+                if( !attributeIdns.length )
+                    return attrs;
+                // Else do special filtering and formatting
+                return {
+                    profile : {
+                        id      : profile.id,
+                        idn     : profile.idn,
+                        name    : profile.name,
+                        email   : profile.email
+                    },
+                    attrs : attrs
+                        .filter( a => {
+                            return attributeIdns.includes(a.idn);
+                        })
+                        .map( a => {
+                            return {
+                                id      : a.id,
+                                idn     : a.idn,
+                                value   : a.value,
+                            };
+                        })
+                };
+            })));
+        }
     }
-    return (() => { 
+    return (() => {
         throw Error(`Unknown command: '${argv.command}'. Use '${process.argv[1]} -c help' for usage.`);
     });
 }
@@ -106,7 +104,7 @@ const main = async () => {
     return getCmdPromise(argv).then(proc=>proc());
 }
 
-main().then( r => { 
+main().then( r => {
     if( argv.stringify )
         console.log(JSON.stringify(r,null,4));
     else
