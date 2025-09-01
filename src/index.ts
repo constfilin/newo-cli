@@ -1,9 +1,9 @@
 #!/usr/bin/env npx tsx
 
-import commandLineArgs  from 'command-line-args'; 
+import commandLineArgs  from 'command-line-args';
 
 import Config           from './Config';
-import Client           from './Client';
+import Customer         from './Customer';
 
 const argv = commandLineArgs([
     { name: 'command',      alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
@@ -41,7 +41,8 @@ Env:
     NEWO_API_KEY or NEWO_API_KEYS   # required, comma-separated list of API keys
 `);
     };
-    const clients = await Promise.all(config.customers.map( c => {
+    // No need to remember clients here - they are cached in Customer class
+    await Promise.all(config.customers.map( c => {
         return c.getClient(config)
             .then( client => {
                 config.log(2, `✓ Client initialized for customer with API key ending in ...${c.api_key.slice(-4)}`);
@@ -50,21 +51,21 @@ Env:
             .catch( e => {
                 throw Error(`❌ Error initializing client for customer with API key ending in ...${c.api_key.slice(-4)}: ${e.message}`);
             });
-    })) as Client[];
-    config.log(1, `✓ Clients initialized for ${clients.length} customer(s)`);
+    }));
+    config.log(1, `✓ Clients initialized for ${config.customers.length} customer(s)`);
     switch( argv.command ) {
         case 'listProjects':
-            return (() => Promise.all(clients.map(c=>c.listProjects())));
+            return (() => Promise.all(config.customers.map(c=>c.listProjects())))
         case 'getProject':
-            return (() => Promise.all(clients.map(c=>c.getProject(argv.projectId))));
+            return (() => Promise.all(config.customers.map(c=>c.client.getProject(argv.projectId))));
         case 'getCustomerProfile':
-            return (() => Promise.all(clients.map(c=>c.getCustomerProfile())));
+            return (() => Promise.all(config.customers.map(c=>c.getCustomerProfile())));
         case 'getCustomerAttrs': {
             const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
-            return (() => Promise.all(clients.map( async ( c ) => {
+            return (() => Promise.all(config.customers.map( async ( c ) => {
                 const [profile,attrs] = await Promise.all([
                     c.getCustomerProfile(),
-                    c.getCustomerAttrs(argv.includeHidden).then( attrs => {
+                    c.client.getCustomerAttrs(argv.includeHidden).then( attrs => {
                         if( attributeIdns.length>0 ) {
                             const idns = argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0);
                             return attrs.attributes.filter( a => attributeIdns.includes(a.idn) );

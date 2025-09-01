@@ -1,38 +1,13 @@
 # NEWO CLI
 
-Mirror NEWO "Project → Agent → Flow → Skills" to local files and back, Git-first.
+Mass reading attributes of NEWO agents
 
 ## Install
-
-### Option 1: Global Installation (Recommended)
-```bash
-npm install -g newo
-```
-After global installation, use the CLI anywhere:
-```bash
-newo pull
-newo push
-newo status
-```
-
-### Option 2: Local Installation
-```bash
-# In your project directory
-npm install newo
-```
-Use with npx:
-```bash
-npx newo pull
-npx newo push  
-npx newo status
-```
-
-### Option 3: Development Installation
 ```bash
 # Clone the repository
-git clone https://github.com/sabbah13/newo-cli.git
+git clone https://github.com/constfilin/newo-cli.git
 cd newo-cli
-npm install
+npm i
 ```
 
 ## Configure
@@ -44,6 +19,8 @@ npm install
 4. **Create** a new **Connector** for this Integration
 5. **Copy** your API key (it will look like: `458663bd41f2d1...`)
 
+Repeat the above for each project you want to read from
+
 ![How to get your NEWO API Key](assets/newo-api-key.png)
 
 ### Step 2: Setup Environment
@@ -54,106 +31,16 @@ cp .env.example .env
 
 Required environment variables:
 - `NEWO_BASE_URL` (default `https://app.newo.ai`)
-- `NEWO_API_KEY` (your API key from Step 1)
-
-Optional environment variables:
-- `NEWO_PROJECT_ID` (specific project UUID - if not set, pulls all accessible projects)
-- `NEWO_ACCESS_TOKEN` (direct access token)
-- `NEWO_REFRESH_TOKEN` (refresh token)
-- `NEWO_REFRESH_URL` (custom refresh endpoint)
+- `NEWO_API_KEYS` (your API keys from Step 1 separated by comma)
 
 ## Commands
 ```bash
-npx newo pull                              # download all projects -> ./projects/ OR specific project if NEWO_PROJECT_ID set
-npx newo status                            # list modified files
-npx newo push                              # upload modified *.guidance/*.jinja back to NEWO
-npx newo import-akb <file> <persona_id>    # import AKB articles from file
-npx newo meta                              # get project metadata (debug, requires NEWO_PROJECT_ID)
+npm run help                               # show complete help on command line options
+npm run listProjects                       # list projects in each customer
+npm run getCustomerProfile                 # list profiles of the customers
+npm run getCustomerAttrs                   # list attributes of the customers
 ```
-
-### Project Structure
-Files are stored as:
-- **Multi-project mode** (no NEWO_PROJECT_ID): `./projects/<ProjectIdn>/<AgentIdn>/<FlowIdn>/<SkillIdn>.guidance|.jinja`
-- **Single-project mode** (NEWO_PROJECT_ID set): `./projects/<ProjectIdn>/<AgentIdn>/<FlowIdn>/<SkillIdn>.guidance|.jinja`
-
-Each project folder contains:
-- `metadata.json` - Project metadata (title, description, version, etc.)
-- `flows.yaml` - Complete project structure export for external tools
-- Agent/Flow/Skill hierarchy with `.guidance` (AI prompts) and `.jinja` (NSL templates)
-
-Hashes are tracked in `.newo/hashes.json` so only changed files are pushed.
-
-## Features
-- **Multi-project support**: Pull all accessible projects or specify a single project
-- **Two-way sync**: Pull NEWO projects to local files, push local changes back
-- **Change detection**: SHA256 hashing prevents unnecessary uploads
-- **Multiple file types**: `.guidance` (AI prompts) and `.jinja` (NSL templates)
-- **Project metadata**: Each project includes `metadata.json` with complete project info
-- **AKB import**: Import knowledge base articles from structured text files
-- **Project structure export**: Generates `flows.yaml` with complete project metadata
-- **Robust authentication**: API key exchange with automatic token refresh
-- **CI/CD ready**: GitHub Actions workflow included
-
-## CI/CD (GitHub Actions)
-Create `.github/workflows/deploy.yml`:
-```yaml
-name: Deploy NEWO Skills
-on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'projects/**/*.guidance'
-      - 'projects/**/*.jinja'
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci
-      - run: node ./src/cli.js push
-        env:
-          NEWO_BASE_URL: https://app.newo.ai
-          NEWO_PROJECT_ID: ${{ secrets.NEWO_PROJECT_ID }}
-          NEWO_API_KEY: ${{ secrets.NEWO_API_KEY }}
-          # Optional:
-          # NEWO_REFRESH_URL: ${{ secrets.NEWO_REFRESH_URL }}
-```
-
-## AKB Import
-
-Import knowledge base articles from structured text files into NEWO personas:
-
-```bash
-npx newo import-akb akb.txt da4550db-2b95-4500-91ff-fb4b60fe7be9
-```
-
-### AKB File Format
-```
----
-# r001
-## Category / Subcategory / Description
-## Summary description of the category
-## Keywords; separated; by; semicolons
-
-<Category type="Category Name">
-Item Name: $Price [Modifiers: modifier1, modifier2]
-Another Item: $Price [Modifiers: modifier3]
-</Category>
----
-```
-
-Each article will be imported with:
-- **topic_name**: The descriptive category title
-- **source**: The article ID (e.g., "r001") 
-- **topic_summary**: The full category content with pricing
-- **topic_facts**: Array containing category, summary, and keywords
-- **confidence**: 100
-- **labels**: ["rag_context"]
-
-Use `--verbose` flag to see detailed import progress.
+See more options in output of `npm run help` command
 
 ## API Endpoints
 - `GET /api/v1/designer/projects` - List all accessible projects

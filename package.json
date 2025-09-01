@@ -52,6 +52,7 @@
         "mocha": "^10.2.0"
     },
     "scripts": {
+        "help": "npx tsx ./src/index.ts help",
         "listProjects": "npx tsx ./src/index.ts listProjects",
         "getCustomerProfile": "npx tsx ./src/index.ts getCustomerProfile",
         "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs"

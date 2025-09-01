@@ -1,17 +1,23 @@
 import fs       from 'fs-extra';
 import * as axios from 'axios';
 
-import Config from './Config';
-import Client from './Client';
+import Config   from './Config';
+import Client   from './Client';
+import {
+    Project
+}               from './Types';
 
 export default class Customer {
 
-    api_key         : string;
-    tokens_path     : string;
+    private api_key         : string;
+    private tokens_path     : string;
+    private access_token?   : string;
+    private refresh_token?  : string;
+    private refresh_url?    : string;
 
-    access_token?   : string;
-    refresh_token?  : string;
-    refresh_url?    : string;
+    public  client?         : Client;
+    public  projects?       : Project[];
+    public  profile?        : Record<string,any>;
 
     // private
     private async saveTokens( tokens:Record<string,any> ) {
@@ -96,13 +102,15 @@ export default class Customer {
         this.tokens_path = tokens_path;
     }
     async getClient( config:Config ) : Promise<Client> {
+        if( this.client )
+            return this.client;
         let accessToken = await this.getValidAccessToken(config);
         config.log(3,`✓ Access token obtained for key ending in ...${this.api_key.slice(-4)}`);
-        const client = axios.default.create({
+        const ai = axios.default.create({
             baseURL: config.base_url,
             headers: { accept: 'application/json' }
         });
-        client.interceptors.request.use(async( config_ ) => {
+        ai.interceptors.request.use(async( config_ ) => {
             // @ts-expect-error
             config_.headers = config.headers || {};
             config_.headers.Authorization = `Bearer ${accessToken}`;
@@ -116,7 +124,7 @@ export default class Customer {
             return config_;
         });
         let retried = false;
-        client.interceptors.response.use(
+        ai.interceptors.response.use(
             ( r ) => {
                 if( config.log_level>2 ) {
                     config.log(1, `← ${r.status} ${r.config.method?.toUpperCase()} ${r.config.url}`);
@@ -140,11 +148,32 @@ export default class Customer {
                     config.log(2, '🔄 Retrying with fresh token...');
                     accessToken = await this.forceReauth(config);
                     error.config.headers.Authorization = `Bearer ${accessToken}`;
-                    return client.request(error.config);
+                    return ai.request(error.config);
                 }
                 throw error;
             }
         );
-        return new Client(client);
+        return (this.client=new Client(ai));
+    }
+    // These 2 provide cached versions of projects and profile
+    listProjects() {
+        if( this.projects )
+            return this.projects;
+        if( !this.client )
+            throw new Error('Client not initialized. Call getClient() first.');
+        return this.client.listProjects().then( projects => {
+            this.projects = projects;
+            return projects;
+        });
+    }
+    getCustomerProfile() {
+        if( this.profile )
+            return this.profile;
+        if( !this.client )
+            throw new Error('Client not initialized. Call getClient() first.');
+        return this.client.getCustomerProfile().then( profile => {
+            this.profile = profile;
+            return profile;
+        });
     }
 }
