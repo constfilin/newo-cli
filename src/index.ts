@@ -1,5 +1,6 @@
 #!/usr/bin/env npx tsx
 
+import consoleTable     from 'console.table';
 import commandLineArgs  from 'command-line-args';
 
 import Config           from './Config';
@@ -11,6 +12,7 @@ const argv = commandLineArgs([
     { name: 'projectId',    alias: 'p', type: String    , defaultValue: '' },
     { name: 'includeHidden',alias: 'i', type: Boolean   , defaultValue: true },
     { name: 'attributeIdns',alias: 'a', type: String    , defaultValue: '' },
+    { name: 'formatasTable',alias: 't', type: Boolean   , defaultValue: false },
     { name: 'stringify',    alias: 's', type: Boolean },
 ]);
 
@@ -62,6 +64,10 @@ Env:
             return (() => Promise.all(config.customers.map(c=>c.getCustomerProfile())));
         case 'getCustomerAttrs': {
             const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
+            const attributeNdxs = attributeIdns.reduce( (acc,idn,ndx) => {
+                acc[idn] = ndx;
+                return acc;
+            },{} as Record<string,number>);
             return (() => Promise.all(config.customers.map( async ( c ) => {
                 const [profile,attrs] = await Promise.all([
                     c.getCustomerProfile(),
@@ -87,14 +93,31 @@ Env:
                         .filter( a => {
                             return attributeIdns.includes(a.idn);
                         })
+                        .sort( (a,b) => {
+                            // Sort the attributes in the order they were requested
+                            return (attributeNdxs[a.idn]||0) - (attributeNdxs[b.idn]||0);
+                        })
                         .map( a => {
                             return {
                                 idn     : a.idn,
                                 value   : a.value,
                             };
                         })
-                };
-            })));
+                }
+            })).then( (results:({profile:Record<string,any>,attrs:Record<string,any>[]})[]) => {
+                if( !argv.formatasTable )
+                    return results;
+                return consoleTable.getTable(results.reduce( (acc,res,ndx) => {
+                    const line = res.attrs.reduce( (acc2,attr) => {
+                        acc2[attr.idn.substr(0,80)] = attr.value;
+                        return acc2;
+                    },{
+                        customer : res.profile.idn,
+                    } as Record<string,any>);
+                    acc.push(line);
+                    return acc;
+                },[] as Record<string,any>[]));
+            }));
         }
     }
     return (() => {
