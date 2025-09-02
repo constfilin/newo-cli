@@ -7,13 +7,13 @@ import Config           from './Config';
 import Customer         from './Customer';
 
 const argv = commandLineArgs([
-    { name: 'command',      alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
-    { name: 'logLevel',     alias: 'l', type: Number    , defaultValue: 0 },
-    { name: 'projectId',    alias: 'p', type: String    , defaultValue: '' },
-    { name: 'includeHidden',alias: 'i', type: Boolean   , defaultValue: true },
-    { name: 'attributeIdns',alias: 'a', type: String    , defaultValue: '' },
-    { name: 'formatasTable',alias: 't', type: Boolean   , defaultValue: false },
-    { name: 'stringify',    alias: 's', type: Boolean },
+    { name: 'command'       ,alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
+    { name: 'logLevel'      ,alias: 'l', type: Number    , defaultValue: 0 },
+    { name: 'projectId'     ,alias: 'p', type: String    , defaultValue: '' },
+    { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true },
+    { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
+    { name: 'tableColLength',alias: 't', type: Number    , defaultValue: 0 },
+    { name: 'stringify'     ,alias: 's', type: Boolean },
 ]);
 
 const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => {
@@ -37,6 +37,7 @@ getProject Flags:
 getCustomerAttrs Flags:
     --includeHidden, -i             # include hidden attributes
     --attributeIdns, -a             # optional comma-separated list of attribute IDNs to fetch
+    --tableColLength,-t             # default is 0. if >0 then the output is formatted as a table with each column max length
 
 Env:
     NEWO_BASE_URL                   # optional, default is https://app.newo.ai
@@ -105,11 +106,15 @@ Env:
                         })
                 }
             })).then( (results:({profile:Record<string,any>,attrs:Record<string,any>[]})[]) => {
-                if( !argv.formatasTable )
+                if( argv.tableColLength<=0 )
                     return results;
                 return consoleTable.getTable(results.reduce( (acc,res,ndx) => {
                     const line = res.attrs.reduce( (acc2,attr) => {
-                        acc2[attr.idn.substr(0,80)] = attr.value;
+                        // Truncation of attributes IDNs can create colliding column names
+                        let colName = attr.idn.substr(0,argv.tableColLength);
+                        while( colName in acc2 )
+                            colName = colName.substr(0,colName.length-1);
+                        acc2[colName] = attr.value;
                         return acc2;
                     },{
                         customer : res.profile.idn,
