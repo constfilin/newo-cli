@@ -8,45 +8,53 @@ import dayjs    from 'dayjs';
 import dotenv   from 'dotenv';
 import Customer from './Customer';
 
-const saveStats = ( path:string ) => {
-    try {
-        return fs.statSync(path);
-    }
-    catch( err ) {
-        return undefined;
-    }
-}
-
-export default class Config {
+export class Config {
 
     log_level       : number;
     base_url        : string;
+    projects_dir    : string;
     state_dir       : string;
     customers       : Customer[] = [];
 
-    constructor( log_level?:number ) {
+    constructor() {
         dotenv.config();
-        this.log_level      = log_level ?? 0;
+        const log_level_env = process.env.LOG_LEVEL ? parseInt(process.env.LOG_LEVEL) : NaN;
+        this.log_level      = isNaN(log_level_env) ? 0 : log_level_env;
         this.base_url       = process.env.NEWO_BASE_URL||'https://app.newo.ai';
+        this.projects_dir   = process.env.NEWO_PROJECTS_DIR||path.join(process.cwd(),'projects');
+        if( !this.getStats(this.projects_dir)?.isDirectory() )
+            fs.mkdirSync(this.projects_dir);
         this.state_dir      = path.join(process.env.NEWO_STATE_DIR||process.cwd(),'.newo');
-        if( !saveStats(this.state_dir)?.isDirectory() )
+        if( !this.getStats(this.state_dir)?.isDirectory() )
             fs.mkdirSync(this.state_dir);
         const tokens_dir = path.join(this.state_dir,'tokens');
-        if( !saveStats(tokens_dir)?.isDirectory() )
+        if( !this.getStats(tokens_dir)?.isDirectory() )
             fs.mkdirSync(tokens_dir);
         this.customers      = (process.env.NEWO_API_KEYS||process.env.NEWO_API_KEY).split(',').map(k=>k.trim()).filter(k=>k.length>0).map( api_key => {
-            // Storing tokens in files matching API key is a security concern, so we hash the key
-            const token_file = crypto.createHash('sha256').update(api_key).digest('base64').replace(/\//g,'_') + '.json';
-            return new Customer(api_key,path.join(tokens_dir,token_file));
+            // Creating file/directory names matching API key is a security concern, so we hash the key
+            const key_hash = crypto.createHash('sha256').update(api_key).digest('base64').replace(/\//g,'_');
+            return new Customer(
+                api_key,
+                path.join(this.projects_dir,key_hash),
+                path.join(tokens_dir,`${key_hash}.json`)
+            );
         });
     }
-    get nowstr() : string {
-        return dayjs().format("YYYY-MM-DD HH:mm:ss");
+    getStats( path:string ) {
+        // Doesn't really have to me a method of this class, but whatever
+        try {
+            return fs.statSync(path);
+        }
+        catch( err ) {
+            return undefined;
+        }
     }
     log( level:number, ...args:any[] ) {
         if( this.log_level >= level ) {
             // tslint:disable:no-console
-            console.log(level,`${this.nowstr}:${level}: ` + util.format(...args));
+            console.log(level,`${dayjs().format("YYYY-MM-DD HH:mm:ss")}:${level}: ` + util.format(...args));
         }
     }
 };
+
+export default new Config();

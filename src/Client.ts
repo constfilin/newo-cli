@@ -1,7 +1,8 @@
 import * as axios   from 'axios';
 import {
-    Skill,
+    FlowSkill,
     Flow,
+    FlowEvent,
     Agent,
     Project,
     ProjectBase
@@ -19,22 +20,22 @@ export default class Client {
     }
     private async listFlowSkills( flowId:string ) {
         const r = await this.axios.get(`/api/v1/designer/flows/${flowId}/skills`);
-        return r.data as Skill[];
-    }
-    private async getSkill(skillId) {
-        const r = await this.axios.get(`/api/v1/designer/skills/${skillId}`);
-        return r.data as Skill;
-    }
-    private async updateSkill(skillObject) {
-        await this.axios.put(`/api/v1/designer/flows/skills/${skillObject.id}`, skillObject);
+        return r.data as FlowSkill[];
     }
     private async listFlowEvents(flowId) {
         const r = await this.axios.get(`/api/v1/designer/flows/${flowId}/events`);
-        return r.data;
+        return r.data as FlowEvent[];
     }
     private async listFlowStates(flowId) {
         const r = await this.axios.get(`/api/v1/designer/flows/${flowId}/states`);
         return r.data;
+    }
+    private async getSkill(skillId) {
+        const r = await this.axios.get(`/api/v1/designer/skills/${skillId}`);
+        return r.data as FlowSkill;
+    }
+    private async updateSkill(skillObject) {
+        await this.axios.put(`/api/v1/designer/flows/skills/${skillObject.id}`, skillObject);
     }
     private async importAkbArticle(articleData) {
         const r = await this.axios.post('/api/v1/akb/append-manual', articleData);
@@ -43,21 +44,34 @@ export default class Client {
     // public
     constructor( private axios:axios.AxiosInstance ) {
     }
-    async listProjects() {
+    async listProjectBases() : Promise<ProjectBase[]> {
         const r = await this.axios.get(`/api/v1/designer/projects`);
-        return r.data as Project[];
+        return r.data as ProjectBase[];
     }
-    async getProject( project_id:string ) {
+    async getProject( project_id:string )  : Promise<Project> {
         const [project,agents] = await Promise.all([
             this.getProjectBase(project_id) as Promise<Project>,
             this.listProjectAgents(project_id)
         ]);
-        project.agents = await Promise.all(agents.map( async (a) => {
-            a.flows = await Promise.all((a.flows as any[]).map( async (f) => {
-                f.skills = await this.listFlowSkills(f.id) as any;
-                return f;
-            }));
-            return a;
+        project.agents = await Promise.all(agents.map((a) => {
+            return Promise.all(a.flows.map( f => {
+                return Promise.all([
+                    this.listFlowSkills(f.id).then( skills => {
+                        f.skills = skills;
+                    }),
+                    this.listFlowEvents(f.id).then( events => {
+                        f.events = events;
+                    }),
+                    this.listFlowStates(f.id).then( states => {
+                        f.states = states;
+                    })
+                ]).then( () => {
+                    return f;
+                });
+            })).then( flows => {
+                a.flows = flows;
+                return a;
+            });
         }));
         return project;
     }

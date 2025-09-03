@@ -3,12 +3,11 @@
 import consoleTable     from 'console.table';
 import commandLineArgs  from 'command-line-args';
 
-import Config           from './Config';
+import config           from './Config';
 import Customer         from './Customer';
 
 const argv = commandLineArgs([
     { name: 'command'       ,alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
-    { name: 'logLevel'      ,alias: 'l', type: Number    , defaultValue: 0 },
     { name: 'projectId'     ,alias: 'p', type: String    , defaultValue: '' },
     { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true },
     { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
@@ -17,19 +16,18 @@ const argv = commandLineArgs([
 ]);
 
 const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => {
-    const config = new Config(argv.logLevel);
     if( argv.command==='help' )
         return () => {
             console.log(`NEWO CLI
 Usage:
-    newo listProjects               # list all accessible projects
+    newo pullProjects               # pull all projects and their data
+    newo listProjectBases           # list all accessible project bases
     newo getCustomerProfile         # get customer profile
     newo getProject                 # get project (requires -p)
     newo getCustomerAttrs           # get project attributes (requires -p)
 
 Common Flags:
-    --logLevel, -l                  # verbosity level 0..3 (default: 0)
-    --stringify, -s                 # output result as JSON string
+    --stringify, -s                 # send the output through JSON.stringify
 
 getProject Flags:
     --projectId, -p                 # project Id (getProject only)
@@ -40,13 +38,16 @@ getCustomerAttrs Flags:
     --tableColLength,-t             # default is 0. if >0 then the output is formatted as a table with each column max length
 
 Env:
-    NEWO_BASE_URL                   # optional, default is https://app.newo.ai
     NEWO_API_KEY or NEWO_API_KEYS   # required, comma-separated list of API keys
+    LOG_LEVEL                       # optional, default is 0, higher means more verbose logging
+    NEWO_BASE_URL                   # optional, default is https://app.newo.ai
+    NEWO_PROJECTS_DIR               # optional, where to download the projects to, default is './projects'
+    NEWO_STATE_DIR                  # optional, where to keep the projects state at, default is './.newo'
 `);
     };
     // No need to remember clients here - they are cached in Customer class
     await Promise.all(config.customers.map( c => {
-        return c.getClient(config)
+        return c.getClient()
             .then( client => {
                 config.log(2, `✓ Client initialized for customer with API key ending in ...${c.api_key.slice(-4)}`);
                 return client;
@@ -57,8 +58,10 @@ Env:
     }));
     config.log(1, `✓ Clients initialized for ${config.customers.length} customer(s)`);
     switch( argv.command ) {
-        case 'listProjects':
-            return (() => Promise.all(config.customers.map(c=>c.listProjects())))
+        case 'pullProjects':
+            return (() => Promise.all(config.customers.map(c=>c.pullProjects())));
+        case 'listProjectBases':
+            return (() => Promise.all(config.customers.map(c=>c.listProjectBases())))
         case 'getProject':
             return (() => Promise.all(config.customers.map(c=>c.client.getProject(argv.projectId))));
         case 'getCustomerProfile':

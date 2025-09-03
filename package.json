@@ -46,15 +46,19 @@
         "dayjs": "^1.11.18",
         "dotenv": "^16.4.5",
         "fs-extra": "^11.2.0",
+        "js-yaml": "^4.1.0",
         "tsx": "^4.20.5"
     },
     "devDependencies": {
+        "@types/fs-extra": "^11.0.4",
+        "@types/js-yaml": "^4.0.9",
         "@types/node": "^24.3.0",
         "mocha": "^10.2.0"
     },
     "scripts": {
         "help": "npx tsx ./src/index.ts help",
-        "listProjects": "npx tsx ./src/index.ts listProjects",
+        "pullProjects": "npx tsx ./src/index.ts pullProjects",
+        "listProjectBases": "npx tsx ./src/index.ts listProjectBases",
         "getCustomerProfile": "npx tsx ./src/index.ts getCustomerProfile",
         "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs"
     }

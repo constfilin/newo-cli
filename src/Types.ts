@@ -1,4 +1,4 @@
-export interface Skill {
+export interface FlowSkill {
     id                      : string;
     title                   : string;
     idn                     : string;
@@ -7,6 +7,22 @@ export interface Skill {
     parameters              : any[];
     path                    : string;
     prompt_script?          : string;
+}
+export interface FlowEvent {
+    description             : string|null;
+    idn                     : string;
+    skill_selector          : string;
+    skill_idn               : string;
+    state_idn               : string|null;
+    integration_idn         : string|null;
+    connector_idn           : string|null;
+    interrupt_mode          : string;
+}
+export interface FlowState {
+    title                   : string;
+    idn                     : string;
+    default_value           : string;
+    scope                   : string;
 }
 export interface FlowBase {
     id                      : string;
@@ -23,10 +39,15 @@ export interface FlowBase {
     }
 }
 export interface Flow extends FlowBase {
-    skills                  : Skill[];
+    skills                  : FlowSkill[];
+    events                  : FlowEvent[];
+    states                  : FlowState[];
 }
 export interface Agent {
     id                      : string;
+    idn                     : string;
+    title                   : string;
+    description             : string|null;
     flows                   : Flow[];
 }
 export interface ProjectBase {
