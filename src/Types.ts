@@ -50,7 +50,7 @@ export interface Agent {
     description             : string|null;
     flows                   : Flow[];
 }
-export interface ProjectBase {
+export interface ProjectMeta {
     id                      : string;
     idn                     : string;
     title                   : string;
@@ -65,6 +65,6 @@ export interface ProjectBase {
     created_at              : string;
     updated_at              : string;
 }
-export interface Project extends ProjectBase {
+export interface Project extends ProjectMeta {
     agents                  : Agent[];
 }

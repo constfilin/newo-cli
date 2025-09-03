@@ -37,7 +37,7 @@ Required environment variables:
 ```bash
 npm run help                               # show complete help on command line options
 npm run pullProjects                       # download all projects into ./projects/ or into NEWO_PROJECTS_DIR
-npm run listProjectBases                   # list base information about projects for each customer
+npm run listProjectMetas                   # list base information about projects for each customer
 npm run getCustomerProfile                 # list profiles of the customers
 npm run getCustomerAttrs                   # list attributes of the customers
 ```

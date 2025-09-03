@@ -5,7 +5,7 @@ import {
     FlowEvent,
     Agent,
     Project,
-    ProjectBase
+    ProjectMeta
 }                   from './Types';
 
 export default class Client {
@@ -14,9 +14,9 @@ export default class Client {
         const r = await this.axios.get(`/api/v1/bff/agents/list`, { params: { project_id } });
         return r.data as Agent[];
     }
-    private async getProjectBase( project_id:string ) {
+    private async getProjectMeta( project_id:string ) {
         const r = await this.axios.get(`/api/v1/designer/projects/by-id/${project_id}`);
-        return r.data as ProjectBase;
+        return r.data as ProjectMeta;
     }
     private async listFlowSkills( flowId:string ) {
         const r = await this.axios.get(`/api/v1/designer/flows/${flowId}/skills`);
@@ -44,13 +44,13 @@ export default class Client {
     // public
     constructor( private axios:axios.AxiosInstance ) {
     }
-    async listProjectBases() : Promise<ProjectBase[]> {
+    async listProjectMetas() : Promise<ProjectMeta[]> {
         const r = await this.axios.get(`/api/v1/designer/projects`);
-        return r.data as ProjectBase[];
+        return r.data as ProjectMeta[];
     }
     async getProject( project_id:string )  : Promise<Project> {
         const [project,agents] = await Promise.all([
-            this.getProjectBase(project_id) as Promise<Project>,
+            this.getProjectMeta(project_id) as Promise<Project>,
             this.listProjectAgents(project_id)
         ]);
         project.agents = await Promise.all(agents.map((a) => {

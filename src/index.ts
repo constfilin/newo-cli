@@ -21,7 +21,7 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
             console.log(`NEWO CLI
 Usage:
     newo pullProjects               # pull all projects and their data
-    newo listProjectBases           # list all accessible project bases
+    newo listProjectMetas           # list all accessible project bases
     newo getCustomerProfile         # get customer profile
     newo getProject                 # get project (requires -p)
     newo getCustomerAttrs           # get project attributes (requires -p)
@@ -49,19 +49,19 @@ Env:
     await Promise.all(config.customers.map( c => {
         return c.getClient()
             .then( client => {
-                config.log(2, `✓ Client initialized for customer with API key ending in ...${c.api_key.slice(-4)}`);
+                config.log(2, `✓ Client initialized for customer with API key ending in ...${c.apiKey.slice(-4)}`);
                 return client;
             })
             .catch( e => {
-                throw Error(`❌ Error initializing client for customer with API key ending in ...${c.api_key.slice(-4)}: ${e.message}`);
+                throw Error(`❌ Error initializing client for customer with API key ending in ...${c.apiKey.slice(-4)}: ${e.message}`);
             });
     }));
     config.log(1, `✓ Clients initialized for ${config.customers.length} customer(s)`);
     switch( argv.command ) {
         case 'pullProjects':
             return (() => Promise.all(config.customers.map(c=>c.pullProjects())));
-        case 'listProjectBases':
-            return (() => Promise.all(config.customers.map(c=>c.listProjectBases())))
+        case 'listProjectMetas':
+            return (() => Promise.all(config.customers.map(c=>c.listProjectMetas())))
         case 'getProject':
             return (() => Promise.all(config.customers.map(c=>c.client.getProject(argv.projectId))));
         case 'getCustomerProfile':

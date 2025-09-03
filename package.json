@@ -58,7 +58,7 @@
     "scripts": {
         "help": "npx tsx ./src/index.ts help",
         "pullProjects": "npx tsx ./src/index.ts pullProjects",
-        "listProjectBases": "npx tsx ./src/index.ts listProjectBases",
+        "listProjectMetas": "npx tsx ./src/index.ts listProjectMetas",
         "getCustomerProfile": "npx tsx ./src/index.ts getCustomerProfile",
         "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs"
     }
