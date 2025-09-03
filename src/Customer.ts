@@ -209,7 +209,7 @@ export default class Customer {
                 return a.flows.reduce( (acc,f) => {
                     return f.skills.reduce( (acc,s) => {
                         const skillPath = getSkillPath(a,f,s);
-                        acc[skillPath] = crypto.createHash('sha256').update(fs.readFileSync(skillPath,'utf8'),'utf8').digest('hex');
+                        acc[skillPath.substring(this.projectPath.length+1)] = crypto.createHash('sha256').update(fs.readFileSync(skillPath,'utf8'),'utf8').digest('hex');
                         return acc;
                     },acc);
                 },acc);
@@ -301,7 +301,7 @@ export default class Customer {
         await this.listProjectMetas();
         if( !this.projectMetasById )
             throw new Error('Projects not loaded. Call listProjectMetas() first.');
-        return Promise.all(Object.values(this.projectMetasById).map(pb=>this.client.getProject(pb.id))).then( projects => {
+        return Promise.all(Object.values(this.projectMetasById).map(pm=>this.client.getProject(pm.id))).then( projects => {
             this.projectsById = projects.reduce( (acc,p) => {
                 acc[p.id] = p;
                 return acc;
@@ -310,9 +310,15 @@ export default class Customer {
         });
     }
     pullProjects() : Promise<Project[]> {
-        return this.getProjects().then( projects => {
-            return Promise.all(projects.map(p=>this.pullProject(p)));
-        });
+        return this.getProjects()
+            .then( projects => {
+                return Promise.all(projects.map(p=>this.pullProject(p)))
+            })
+            .then( projects => {
+                // TODO
+                // Write MAP_PATH
+                return projects;
+            });
     }
     getCustomerProfile() {
         if( this.profile )
@@ -323,5 +329,8 @@ export default class Customer {
             this.profile = profile;
             return profile;
         });
+    }
+    projectStatus() {
+        throw Error(`not implemented`);
     }
 }

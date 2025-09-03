@@ -21,6 +21,7 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
             console.log(`NEWO CLI
 Usage:
     newo pullProjects               # pull all projects and their data
+    newo projectStatus              # show modified files
     newo listProjectMetas           # list all accessible project bases
     newo getCustomerProfile         # get customer profile
     newo getProject                 # get project (requires -p)
@@ -60,6 +61,8 @@ Env:
     switch( argv.command ) {
         case 'pullProjects':
             return (() => Promise.all(config.customers.map(c=>c.pullProjects())));
+        case 'projectStatus':
+            return (() => Promise.all(config.customers.map(c=>c.projectStatus())));
         case 'listProjectMetas':
             return (() => Promise.all(config.customers.map(c=>c.listProjectMetas())))
         case 'getProject':
