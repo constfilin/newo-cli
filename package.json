@@ -47,6 +47,7 @@
         "dotenv": "^16.4.5",
         "fs-extra": "^11.2.0",
         "js-yaml": "^4.1.0",
+        "jwt-decode": "^4.0.0",
         "tsx": "^4.20.5"
     },
     "devDependencies": {

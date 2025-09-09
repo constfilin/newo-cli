@@ -230,56 +230,13 @@ export default class Customer {
     async getClient() : Promise<Client> {
         if( this.client )
             return this.client;
-        let accessToken = await this.getValidAccessToken();
+        const accessToken = await this.getValidAccessToken();
         config.log(3,`✓ Access token obtained for key ending in ...${this.apiKey.slice(-4)}`);
         const ai = axios.default.create({
             baseURL: config.baseUrl,
             headers: { accept: 'application/json' }
         });
-        ai.interceptors.request.use(async( config_ ) => {
-            // @ts-expect-error
-            config_.headers = config.headers || {};
-            config_.headers.Authorization = `Bearer ${accessToken}`;
-            if (config.logLevel>2 ) {
-                config.log(2, `→ ${config_.method?.toUpperCase()} ${config_.url}`);
-                if (config_.data)
-                    config.log(2, '  Data:', JSON.stringify(config_.data, null, 2));
-                if (config_.params)
-                    config.log(1, '  Params:', config_.params);
-            }
-            return config_;
-        });
-        let retried = false;
-        ai.interceptors.response.use(
-            ( r ) => {
-                if( config.logLevel>2 ) {
-                    config.log(1, `← ${r.status} ${r.config.method?.toUpperCase()} ${r.config.url}`);
-                    if (r.data && Object.keys(r.data).length < 20) {
-                        config.log(3, '  Response:', JSON.stringify(r.data, null, 2));
-                    } else if (r.data) {
-                        config.log(3, `  Response: [${typeof r.data}] ${Array.isArray(r.data) ? r.data.length + ' items' : 'large object'}`);
-                    }
-                }
-                return r;
-            },
-            async (error) => {
-                const status = error?.response?.status;
-                if( config.logLevel>2 ) {
-                    config.log(1, `← ${status} ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.message}`);
-                    if (error.response?.data)
-                        config.log(1, '  Error data:', error.response.data);
-                }
-                if( status === 401 && !retried ) {
-                    retried = true;
-                    config.log(2, '🔄 Retrying with fresh token...');
-                    accessToken = await this.forceReauth();
-                    error.config.headers.Authorization = `Bearer ${accessToken}`;
-                    return ai.request(error.config);
-                }
-                throw error;
-            }
-        );
-        return (this.client=new Client(ai));
+        return (this.client=new Client(ai,accessToken,()=>this.forceReauth()));
     }
     // These 2 provide cached versions of projects and profile
     async listProjectMetas() : Promise<ProjectMeta[]> {
@@ -329,6 +286,11 @@ export default class Customer {
             this.profile = profile;
             return profile;
         });
+    }
+    getCustomerAccountLinks() {
+        if( !this.client )
+            throw new Error('Client not initialized. Call getClient() first.');
+        return this.client.getCustomerAcctLinks();
     }
     projectStatus() {
         throw Error(`not implemented`);

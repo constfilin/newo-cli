@@ -1,4 +1,5 @@
-import * as axios   from 'axios';
+import * as axios       from 'axios';
+import * as jwtDecode   from 'jwt-decode';
 import {
     FlowSkill,
     Flow,
@@ -7,8 +8,11 @@ import {
     Project,
     ProjectMeta
 }                   from './Types';
+import config       from './Config';
 
 export default class Client {
+    private anotherToken? : string;
+
     // private
     private async listProjectAgents( project_id:string ) {
         const r = await this.axios.get(`/api/v1/bff/agents/list`, { params: { project_id } });
@@ -42,7 +46,55 @@ export default class Client {
         return r.data;
     }
     // public
-    constructor( private axios:axios.AxiosInstance ) {
+    constructor(
+        private         axios       : axios.AxiosInstance,
+        public readonly accessToken : string,
+        private         forceReauth : (()=>Promise<string>)
+    ) {
+        axios.interceptors.request.use(async( config_ ) => {
+            // @ts-expect-error
+            config_.headers = config.headers || {};
+            config_.headers.Authorization = `Bearer ${accessToken}`;
+            console.log({accessToken,url:config_.url});
+            if (config.logLevel>2 ) {
+                config.log(2, `→ ${config_.method?.toUpperCase()} ${config_.url}`);
+                if (config_.data)
+                    config.log(2, '  Data:', JSON.stringify(config_.data, null, 2));
+                if (config_.params)
+                    config.log(1, '  Params:', config_.params);
+            }
+            return config_;
+        });
+        let retried = false;
+        axios.interceptors.response.use(
+            ( r ) => {
+                if( config.logLevel>2 ) {
+                    config.log(1, `← ${r.status} ${r.config.method?.toUpperCase()} ${r.config.url}`);
+                    if (r.data && Object.keys(r.data).length < 20) {
+                        config.log(3, '  Response:', JSON.stringify(r.data, null, 2));
+                    } else if (r.data) {
+                        config.log(3, `  Response: [${typeof r.data}] ${Array.isArray(r.data) ? r.data.length + ' items' : 'large object'}`);
+                    }
+                }
+                return r;
+            },
+            async (error) => {
+                const status = error?.response?.status;
+                if( config.logLevel>2 ) {
+                    config.log(1, `← ${status} ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.message}`);
+                    if (error.response?.data)
+                        config.log(1, '  Error data:', error.response.data);
+                }
+                if( status === 401 && !retried ) {
+                    retried = true;
+                    config.log(2, '🔄 Retrying with fresh token...');
+                    accessToken = await forceReauth();
+                    error.config.headers.Authorization = `Bearer ${accessToken}`;
+                    return axios.request(error.config);
+                }
+                throw error;
+            }
+        );
     }
     async listProjectMetas() : Promise<ProjectMeta[]> {
         const r = await this.axios.get(`/api/v1/designer/projects`);
@@ -83,6 +135,22 @@ export default class Client {
     }
     async getCustomerAttrs( include_hidden=false ) {
         const r = await this.axios.get(`/api/v1/bff/customer/attributes`, { params: { include_hidden } });
+        return r.data;
+    }
+    async getCustomerAcctLinks() {
+        if( !this.anotherToken ) {
+            // Trying to get token from generate-customer-token using the token we already have.
+            // Apparently this does not work :(
+            const decodedToken = jwtDecode.jwtDecode(this.accessToken) as jwtDecode.JwtPayload & { customer_id:string };
+            console.log({decodedToken});
+            const foo = await this.axios.post("/api/v1/auth/generate-customer-token",{
+                to_customer_id : decodedToken.customer_id
+            }).catch( err => {
+                return err;
+            });
+            console.log({foo});
+        }
+        const r = await this.axios.get(`/api/v1/account`, {});
         return r.data;
     }
 }

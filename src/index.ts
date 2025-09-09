@@ -25,7 +25,8 @@ Usage:
     newo listProjectMetas           # list all accessible project bases
     newo getCustomerProfile         # get customer profile
     newo getProject                 # get project (requires -p)
-    newo getCustomerAttrs           # get project attributes (requires -p)
+    newo getCustomerAttrs           # get project attributes
+    newo getCustomerAcctLinks       # get members linked to a customer
 
 Common Flags:
     --stringify, -s                 # send the output through JSON.stringify
@@ -129,6 +130,9 @@ Env:
                     return acc;
                 },[] as Record<string,any>[]));
             }));
+        }
+        case 'getCustomerAcctLinks': {
+            return (() => Promise.all(config.customers.map(c=>c.getCustomerAccountLinks())));
         }
     }
     return (() => {
