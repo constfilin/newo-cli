@@ -55,7 +55,7 @@ export default class Client {
             // @ts-expect-error
             config_.headers = config.headers || {};
             config_.headers.Authorization = `Bearer ${accessToken}`;
-            console.log({accessToken,url:config_.url});
+            //console.log({accessToken,url:config_.url});
             if (config.logLevel>2 ) {
                 config.log(2, `→ ${config_.method?.toUpperCase()} ${config_.url}`);
                 if (config_.data)
@@ -142,15 +142,25 @@ export default class Client {
             // Trying to get token from generate-customer-token using the token we already have.
             // Apparently this does not work :(
             const decodedToken = jwtDecode.jwtDecode(this.accessToken) as jwtDecode.JwtPayload & { customer_id:string };
-            console.log({decodedToken});
             const foo = await this.axios.post("/api/v1/auth/generate-customer-token",{
                 to_customer_id : decodedToken.customer_id
             }).catch( err => {
                 return err;
             });
-            console.log({foo});
+            //console.log({decodedToken,foo});
         }
-        const r = await this.axios.get(`/api/v1/account`, {});
+        const r = await this.axios.get(`/api/v1/account`,{}).catch( err => {
+            return {
+                data : {
+                    message : err.message,
+                    status  : err.status,
+                    code    : err.code,
+                    data    : err.response?.data
+                }
+            };
+            //console.log({err);
+            //return err;
+        });
         return r.data;
     }
 }
