@@ -2,9 +2,9 @@
 
 import consoleTable     from 'console.table';
 import commandLineArgs  from 'command-line-args';
+import objToCsv         from 'objects-to-csv';
 
 import config           from './Config';
-import Customer         from './Customer';
 
 const argv = commandLineArgs([
     { name: 'command'       ,alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
@@ -12,6 +12,7 @@ const argv = commandLineArgs([
     { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true },
     { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
     { name: 'tableColLength',alias: 't', type: Number    , defaultValue: 0 },
+    { name: 'csv'           ,alias: 'v', type: Boolean   , defaultValue: false },
     { name: 'stringify'     ,alias: 's', type: Boolean },
 ]);
 
@@ -38,6 +39,7 @@ getCustomerAttrs Flags:
     --includeHidden, -i             # include hidden attributes
     --attributeIdns, -a             # optional comma-separated list of attribute IDNs to fetch
     --tableColLength,-t             # default is 0. if >0 then the output is formatted as a table with each column max length
+    --csv,-v                        # output as CSV
 
 Env:
     NEWO_API_KEY or NEWO_API_KEYS   # required, comma-separated list of API keys
@@ -113,22 +115,29 @@ Env:
                         })
                 }
             })).then( (results:({profile:Record<string,any>,attrs:Record<string,any>[]})[]) => {
-                if( argv.tableColLength<=0 )
-                    return results;
-                return consoleTable.getTable(results.reduce( (acc,res,ndx) => {
-                    const line = res.attrs.reduce( (acc2,attr) => {
+                const getObjArray = ( colNameGetter:((s:string,colNames:Record<string,any>)=>string) ) => {
+                    return results.reduce( (acc,res,ndx) => {
+                        const line = res.attrs.reduce( (acc2,attr) => {
+                            acc2[colNameGetter(attr.idn,acc2)] = attr.value;
+                            return acc2;
+                        },{
+                            IDN : res.profile.idn,
+                        } as Record<string,any>);
+                        acc.push(line);
+                        return acc;
+                    },[] as Record<string,any>[]);
+                }
+                if( argv.tableColLength>0 )
+                    return consoleTable.getTable(getObjArray( (s,colNames)=> {
                         // Truncation of attributes IDNs can create colliding column names
-                        let colName = attr.idn.substr(0,argv.tableColLength);
-                        while( colName in acc2 )
-                            colName = colName.substr(0,colName.length-1);
-                        acc2[colName] = attr.value;
-                        return acc2;
-                    },{
-                        customer : res.profile.idn,
-                    } as Record<string,any>);
-                    acc.push(line);
-                    return acc;
-                },[] as Record<string,any>[]));
+                        s = s.substring(0,argv.tableColLength)
+                        while( (s.length>4) && (s in colNames) )
+                            s = s.substring(0,s.length-1);
+                        return s;
+                    }));
+                if( argv.csv )
+                    return (new objToCsv( getObjArray( s => s ) )).toString();
+                return results;
             }));
         }
         case 'getCustomerAcctLinks': {
