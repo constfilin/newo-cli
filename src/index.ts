@@ -130,7 +130,7 @@ Env:
                 if( argv.tableColLength>0 )
                     return consoleTable.getTable(getObjArray( (s,colNames)=> {
                         // Truncation of attributes IDNs can create colliding column names
-                        s = s.substring(0,argv.tableColLength)
+                        s = s.replace(/^project_/,'').replace(/^attributes_/,'').replace(/^setting_/,'').substring(0,argv.tableColLength)
                         while( (s.length>4) && (s in colNames) )
                             s = s.substring(0,s.length-1);
                         return s;
