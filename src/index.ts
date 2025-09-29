@@ -27,13 +27,13 @@ Usage:
     newo getCustomerProfile         # get customer profile
     newo getProject                 # get project (requires -p)
     newo getCustomerAttrs           # get project attributes
-    newo getCustomerAcctLinks       # get members linked to a customer
+    newo getCustomerAcctLinks       # get members linked to a customer (broken)
 
 Common Flags:
-    --stringify, -s                 # send the output through JSON.stringify
+    --stringify, -s                 # send all the output through JSON.stringify (helpful with long outputs)
 
 getProject Flags:
-    --projectId, -p                 # project Id (getProject only)
+    --projectId, -p                 # project Id
 
 getCustomerAttrs Flags:
     --includeHidden, -i             # include hidden attributes
