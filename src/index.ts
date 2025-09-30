@@ -40,14 +40,14 @@ const cmdSections = [
     {
         header : 'getProject command options',
         optionList: [
-            { name: 'projectId'     ,alias: 'p', type: String    , defaultValue: '' },
+            { name: 'projectId'     ,alias: 'p', type: String    , defaultValue: ''     , description: 'Required. A customer can have many projects' },
         ]
     },
     {
         header : 'getCustomerAttrs command options',
         optionList: [
             { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true , description: 'Include hidden attributes, optional' },
-            { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
+            { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' , description: 'Comma-separated list of attribute IDNs to retrieve, optional'    },
         ]
     },
     {
