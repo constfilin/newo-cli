@@ -163,4 +163,13 @@ export default class Client {
         });
         return r.data;
     }
+    async getSessions( argv:Record<string,any> ) {
+        const params = ['page','fromDate','toDate','isLead','isTest','connectorId','per'].reduce( (acc, p) => {
+            if( argv[p] )
+                acc[p] = argv[p];
+            return acc;
+        },{} as Record<string,string|boolean>);
+        const r = await this.axios.get(`/api/v1/bff/sessions`, { params });
+        return r.data;
+    }
 }

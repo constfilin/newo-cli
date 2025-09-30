@@ -2,53 +2,75 @@
 
 import consoleTable     from 'console.table';
 import commandLineArgs  from 'command-line-args';
+import commandLineUsage from 'command-line-usage';
 import objToCsv         from 'objects-to-csv';
 
 import config           from './Config';
 
-const argv = commandLineArgs([
-    { name: 'command'       ,alias: 'c', type: String    , defaultValue:'help', defaultOption:true },
-    { name: 'projectId'     ,alias: 'p', type: String    , defaultValue: '' },
-    { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true },
-    { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
-    { name: 'tableColLength',alias: 't', type: Number    , defaultValue: 0 },
-    { name: 'csv'           ,alias: 'v', type: Boolean   , defaultValue: false },
-    { name: 'stringify'     ,alias: 's', type: Boolean },
-]);
+const cmdSections = [
+    {
+        header : 'NEWO CLI',
+        content: [
+            'Command line interface to NEWO. Configuration is read from environment variables or .env file.',
+        ]
+    },
+    {
+        header : 'Commands',
+        content: [
+            "help                   Show this help message",
+            "pullProjects           Pull projects for all customers",
+            "listProjectMetas       List metadata of all projects for all customers",
+            "getProject             Get details of a specific project",
+            "getCustomerProfile     Get profile information for all customers",
+            "getCustomerAttrs       Get customer attributes for all customers",
+            "getCustomerAcctLinks   Get customer account links for all customers",
+            "getSessions            Get sessions for all customers",
+        ]
+    },
+    {
+        header : 'General options',
+        optionList: [
+            { name: 'command'       ,alias: 'c', type: String    , defaultValue:'help'  ,defaultOption:true, description: "The command to execute" },
+            { name: 'stringify'     ,alias: 's', type: Boolean   , defaultValue: false  ,description: "Format output as a JSON string" },
+            { name: 'csv'           ,alias: 'v', type: Boolean   , defaultValue: false  ,description: "Format output as a CSV" },
+            { name: 'tableColLength',alias: 't', type: Number    , defaultValue: 0      ,description: "Format output as a table, truncating column names to this length (0=off)" },
+            { name: 'keeparray'     ,alias: 'k', type: Boolean   , defaultValue: false  ,description: "If not set and the output is an array with a single element, then outputs only this element" },
+        ]
+    },
+    {
+        header : 'getProject command options',
+        optionList: [
+            { name: 'projectId'     ,alias: 'p', type: String    , defaultValue: '' },
+        ]
+    },
+    {
+        header : 'getCustomerAttrs command options',
+        optionList: [
+            { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true },
+            { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
+        ]
+    },
+    {
+        header : 'getSessions command options',
+        optionList: [
+            { name: 'fromDate'      ,alias: 'f', type: String    , defaultValue: '' },
+            { name: 'toDate'        ,alias: 'u', type: String    , defaultValue: '' },
+            { name: 'isLead'        ,alias: 'l', type: String    , defaultValue: '' },
+            { name: 'isTest'        ,alias: 'e', type: String    , defaultValue: '' },
+            { name: 'connectorId'   ,alias: 'n', type: String    , defaultValue: '' },
+            { name: 'page'          ,alias: 'g', type: Number    , defaultValue: 1 },
+            { name: 'per'           ,alias: 'r', type: Number    , defaultValue: 50 },
+        ]
+    }
+];
+
+
+const argv = commandLineArgs(
+    cmdSections.map(s=>s.optionList).filter(ol=>!!ol).flat());
 
 const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => {
     if( argv.command==='help' )
-        return () => {
-            console.log(`NEWO CLI
-Usage:
-    newo pullProjects               # pull all projects and their data
-    newo projectStatus              # show modified files
-    newo listProjectMetas           # list all accessible project bases
-    newo getCustomerProfile         # get customer profile
-    newo getProject                 # get project (requires -p)
-    newo getCustomerAttrs           # get project attributes
-    newo getCustomerAcctLinks       # get members linked to a customer (broken)
-
-Common Flags:
-    --stringify, -s                 # send all the output through JSON.stringify (helpful with long outputs)
-
-getProject Flags:
-    --projectId, -p                 # project Id
-
-getCustomerAttrs Flags:
-    --includeHidden, -i             # include hidden attributes
-    --attributeIdns, -a             # optional comma-separated list of attribute IDNs to fetch
-    --tableColLength,-t             # default is 0. if >0 then the output is formatted as a table with each column max length
-    --csv,-v                        # output as CSV
-
-Env:
-    NEWO_API_KEY or NEWO_API_KEYS   # required, comma-separated list of API keys
-    LOG_LEVEL                       # optional, default is 0, higher means more verbose logging
-    NEWO_BASE_URL                   # optional, default is https://app.newo.ai
-    NEWO_PROJECTS_DIR               # optional, where to download the projects to, default is './projects'
-    NEWO_STATE_DIR                  # optional, where to keep the projects state at, default is './.newo'
-`);
-    };
+        return (()=>commandLineUsage(cmdSections));
     // No need to remember clients here - they are cached in Customer class
     await Promise.all(config.customers.map( c => {
         return c.getClient()
@@ -72,6 +94,10 @@ Env:
             return (() => Promise.all(config.customers.map(c=>c.client.getProject(argv.projectId))));
         case 'getCustomerProfile':
             return (() => Promise.all(config.customers.map(c=>c.getCustomerProfile())));
+        case 'getSessions':
+            return (() => Promise.all(config.customers.map(c=>c.getSessions(argv).then( r => {
+                return (argv.csv || (argv.tableColLength>0)) ? r.items : r;
+            }))));
         case 'getCustomerAttrs': {
             const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
             const attributeNdxs = attributeIdns.reduce( (acc,idn,ndx) => {
@@ -128,15 +154,15 @@ Env:
                     },[] as Record<string,any>[]);
                 }
                 if( argv.tableColLength>0 )
-                    return consoleTable.getTable(getObjArray( (s,colNames)=> {
+                    return getObjArray( (s,colNames)=> {
                         // Truncation of attributes IDNs can create colliding column names
                         s = s.replace(/^project_/,'').replace(/^attributes_/,'').replace(/^setting_/,'').substring(0,argv.tableColLength)
                         while( (s.length>4) && (s in colNames) )
                             s = s.substring(0,s.length-1);
                         return s;
-                    }));
+                    });
                 if( argv.csv )
-                    return (new objToCsv( getObjArray( s => s ) )).toString();
+                    return getObjArray(s=>s);
                 return results;
             }));
         }
@@ -153,9 +179,14 @@ const main = async () => {
 }
 
 main().then( r => {
+    if( Array.isArray(r) && r.length===1 && !argv.keeparray )
+        r = r[0];
     if( argv.stringify )
         console.log(JSON.stringify(r,null,4));
+    else if( argv.csv )
+        (new objToCsv(Array.isArray(r)?r:[r])).toString().then(console.log);
+    else if( argv.tableColLength>0 )
+        console.log(consoleTable.getTable(r)); //Array.isArray(r)?r:[r]));
     else
         console.log(r);
-    process.exit(0);
 }).catch(console.error);

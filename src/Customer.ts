@@ -292,6 +292,11 @@ export default class Customer {
             throw new Error('Client not initialized. Call getClient() first.');
         return this.client.getCustomerAcctLinks();
     }
+    getSessions( argv:Record<string,any> ) {
+        if( !this.client )
+            throw new Error('Client not initialized. Call getClient() first.');
+        return this.client.getSessions(argv);
+    }
     projectStatus() {
         throw Error(`not implemented`);
     }

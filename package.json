@@ -42,6 +42,7 @@
     "dependencies": {
         "axios": "^1.7.7",
         "command-line-args": "^6.0.1",
+        "command-line-usage": "^7.0.3",
         "console.table": "^0.10.0",
         "dayjs": "^1.11.18",
         "dotenv": "^16.4.5",
@@ -64,6 +65,7 @@
         "pullProjects": "npx tsx ./src/index.ts pullProjects",
         "listProjectMetas": "npx tsx ./src/index.ts listProjectMetas",
         "getCustomerProfile": "npx tsx ./src/index.ts getCustomerProfile",
-        "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs"
+        "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs",
+        "getSessions": "npx tsx ./src/index.ts getSessions -v"
     }
 }
