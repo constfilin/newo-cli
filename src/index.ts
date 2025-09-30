@@ -35,6 +35,8 @@ const cmdSections = [
             { name: 'csv'           ,alias: 'v', type: Boolean   , defaultValue: false  ,description: "Format output as a CSV" },
             { name: 'tableColLength',alias: 't', type: Number    , defaultValue: 0      ,description: "Format output as a table, truncating column names to this length (0=off)" },
             { name: 'keeparray'     ,alias: 'k', type: Boolean   , defaultValue: false  ,description: "If not set and the output is an array with a single element, then outputs only this element" },
+            { name: 'sortColumn'    ,alias: 'o', type: String    , defaultValue: ''     ,description: "Column name to sort by if output is an array" },
+            { name: 'sortDirection', alias: 'd', type: Number    , defaultValue: 1      ,description: "Directon to sort by if output is an array (1 or -1)" },
         ]
     },
     {
@@ -96,7 +98,13 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
             return (() => Promise.all(config.customers.map(c=>c.getCustomerProfile())));
         case 'getSessions':
             return (() => Promise.all(config.customers.map(c=>c.getSessions(argv).then( r => {
-                return (argv.csv || (argv.tableColLength>0)) ? r.items : r;
+                if( !argv.csv && (argv.tableColLength<=0) )
+                    return r;
+                return r.items.map( i => {
+                    i.contact = (typeof i.persona === 'object') ? (i.persona.name??i.persona.id) : '???';
+                    delete i.persona;
+                    return i;
+                });
             }))));
         case 'getCustomerAttrs': {
             const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
@@ -179,16 +187,30 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
 const main = async () => {
     return getCmdPromise(argv).then(proc=>proc());
 }
-
+const sortIfArray = ( r:any ) => {
+    if( !Array.isArray(r) )
+        return r;
+    if( !argv.sortColumn )
+        return r;
+    return r.sort( (a,b) => {
+        const left = a[argv.sortColumn];
+        const right = b[argv.sortColumn];
+        if( typeof left === 'number' && typeof right === 'number' )
+            return (left-right)*argv.sortDirection;
+        if( typeof left === 'string' && typeof right === 'string' )
+            return left.localeCompare(right)*argv.sortDirection;
+        return 0;
+    });
+}
 main().then( r => {
     if( Array.isArray(r) && r.length===1 && !argv.keeparray )
         r = r[0];
     if( argv.stringify )
-        console.log(JSON.stringify(r,null,4));
+        console.log(JSON.stringify(sortIfArray(r),null,4));
     else if( argv.csv )
-        (new objToCsv(Array.isArray(r)?r:[r])).toString().then(console.log);
+        (new objToCsv(Array.isArray(r)?sortIfArray(r):[r])).toString().then(console.log);
     else if( argv.tableColLength>0 )
-        console.log(consoleTable.getTable(r)); //Array.isArray(r)?r:[r]));
+        console.log(consoleTable.getTable(sortIfArray(r)));
     else
         console.log(r);
 }).catch(console.error);
