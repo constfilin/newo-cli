@@ -46,20 +46,20 @@ const cmdSections = [
     {
         header : 'getCustomerAttrs command options',
         optionList: [
-            { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true },
+            { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true , description: 'Include hidden attributes, optional' },
             { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' },
         ]
     },
     {
         header : 'getSessions command options',
         optionList: [
-            { name: 'fromDate'      ,alias: 'f', type: String    , defaultValue: '' },
-            { name: 'toDate'        ,alias: 'u', type: String    , defaultValue: '' },
-            { name: 'isLead'        ,alias: 'l', type: String    , defaultValue: '' },
-            { name: 'isTest'        ,alias: 'e', type: String    , defaultValue: '' },
-            { name: 'connectorId'   ,alias: 'n', type: String    , defaultValue: '' },
-            { name: 'page'          ,alias: 'g', type: Number    , defaultValue: 1 },
-            { name: 'per'           ,alias: 'r', type: Number    , defaultValue: 50 },
+            { name: 'fromDate'      ,alias: 'f', type: String    , defaultValue: '' , description: 'optional' },
+            { name: 'toDate'        ,alias: 'u', type: String    , defaultValue: '' , description: 'optional' },
+            { name: 'isLead'        ,alias: 'l', type: String    , defaultValue: '' , description: 'optional' },
+            { name: 'isTest'        ,alias: 'e', type: String    , defaultValue: '' , description: 'optional' },
+            { name: 'connectorId'   ,alias: 'n', type: String    , defaultValue: '' , description: 'optional' },
+            { name: 'page'          ,alias: 'g', type: Number    , defaultValue: 1  , description: 'optional' },
+            { name: 'per'           ,alias: 'r', type: Number    , defaultValue: 50 , description: 'optional' },
         ]
     }
 ];
@@ -141,6 +141,8 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
                         })
                 }
             })).then( (results:({profile:Record<string,any>,attrs:Record<string,any>[]})[]) => {
+                if( !attributeIdns.length )
+                    return results;
                 const getObjArray = ( colNameGetter:((s:string,colNames:Record<string,any>)=>string) ) => {
                     return results.reduce( (acc,res,ndx) => {
                         const line = res.attrs.reduce( (acc2,attr) => {
