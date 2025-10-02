@@ -1,9 +1,13 @@
 #!/usr/bin/env npx tsx
 
+import util             from 'node:util';
+import dayjs            from 'dayjs';
+
 import consoleTable     from 'console.table';
 import commandLineArgs  from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
 import objToCsv         from 'objects-to-csv';
+import OpenAI           from 'openai';
 
 import config           from './Config';
 
@@ -37,6 +41,7 @@ const cmdSections = [
             { name: 'keeparray'     ,alias: 'k', type: Boolean   , defaultValue: false  ,description: "If not set and the output is an array with a single element, then outputs only this element" },
             { name: 'sortColumn'    ,alias: 'o', type: String    , defaultValue: ''     ,description: "Column name to sort by if output is an array" },
             { name: 'sortDirection', alias: 'd', type: Number    , defaultValue: 1      ,description: "Directon to sort by if output is an array (1 or -1)" },
+            { name: 'abreviate'     ,alias: 'b', type: Boolean   , defaultValue: false  ,description: "Abbreviate output (means different things for different commands)" },
         ]
     },
     {
@@ -48,7 +53,7 @@ const cmdSections = [
     {
         header : 'getCustomerAttrs command options',
         optionList: [
-            { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: true , description: 'Include hidden attributes, optional' },
+            { name: 'includeHidden' ,alias: 'i', type: Boolean   , defaultValue: false , description: 'Include hidden attributes, optional' },
             { name: 'attributeIdns' ,alias: 'a', type: String    , defaultValue: '' , description: 'Comma-separated list of attribute IDNs to retrieve, optional'    },
         ]
     },
@@ -62,6 +67,7 @@ const cmdSections = [
             { name: 'connectorId'   ,alias: 'n', type: String    , defaultValue: '' , description: 'optional' },
             { name: 'page'          ,alias: 'g', type: Number    , defaultValue: 1  , description: 'optional' },
             { name: 'per'           ,alias: 'r', type: Number    , defaultValue: 50 , description: 'optional' },
+            { name: 'openAI'        ,alias: 'z', type: Boolean   , defaultValue: false, description: 'If set, and if the OPENAI_API_KEY environment variable is set, then uses OpenAI to summarize the session transcript' },
         ]
     }
 ];
@@ -149,8 +155,16 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
                         })
                 }
             })).then( (results:({profile:Record<string,any>,attrs:Record<string,any>[]})[]) => {
-                if( !attributeIdns.length )
+                if( !attributeIdns.length ) {
+                    if( argv.abreviate )
+                        return results.map(r=>(r as unknown as Array<Record<string,any>>).map(a => {
+                            return {
+                                idn   : a.idn,
+                                value : argv.tableColLength ? String(a.value).substring(0,argv.tableColLength) : a.value,
+                            }
+                        }));
                     return results;
+                }
                 const getObjArray = ( colNameGetter:((s:string,colNames:Record<string,any>)=>string) ) => {
                     return results.reduce( (acc,res,ndx) => {
                         const line = res.attrs.reduce( (acc2,attr) => {
@@ -184,6 +198,11 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
         throw Error(`Unknown command: '${argv.command}'. Use '${process.argv[1]} -c help' for usage.`);
     });
 }
+
+const log = ( ...args:any ) => {
+    process.stderr.write(`${dayjs().format("YYYY-MM-DD HH:mm:ss")}: `+util.format(...args)+'\n');
+}
+
 const main = async () => {
     return getCmdPromise(argv).then(proc=>proc());
 }
@@ -197,20 +216,73 @@ const sortIfArray = ( r:any ) => {
         const right = b[argv.sortColumn];
         if( typeof left === 'number' && typeof right === 'number' )
             return (left-right)*argv.sortDirection;
-        if( typeof left === 'string' && typeof right === 'string' )
-            return left.localeCompare(right)*argv.sortDirection;
-        return 0;
+        return String(left).localeCompare(String(right))*argv.sortDirection;
     });
 }
 main().then( r => {
     if( Array.isArray(r) && r.length===1 && !argv.keeparray )
         r = r[0];
-    if( argv.stringify )
-        console.log(JSON.stringify(sortIfArray(r),null,4));
-    else if( argv.csv )
-        (new objToCsv(Array.isArray(r)?sortIfArray(r):[r])).toString().then(console.log);
-    else if( argv.tableColLength>0 )
-        console.log(consoleTable.getTable(sortIfArray(r)));
-    else
-        console.log(r);
-}).catch(console.error);
+    if( !argv.openAI || !process.env.OPENAI_API_KEY ) {
+        if( argv.stringify )
+            return JSON.stringify(sortIfArray(r),null,4);
+        else if( argv.csv )
+            return (new objToCsv(Array.isArray(r)?sortIfArray(r):[r])).toString();
+        else if( argv.tableColLength>0 )
+            return consoleTable.getTable(sortIfArray(r));
+        else
+            return r;
+    }
+    else {
+        const items = sortIfArray(r.items.filter(i=>i.arguments?.transcript).map(i=>{
+            return {
+                session_id : i.id,
+                created_at : i.created_at,
+                persona_id : i.persona?.id,
+                transcript : i.arguments?.transcript,
+            };
+        }));
+        // We are going to analyze the sessions using OpenAI
+        // TODO: bundle the API calls in groups of 5 or 10 to speed things up
+        const openAI = new OpenAI({apiKey:process.env.OPENAI_API_KEY});
+        const getOpenAIPromise = ( ndx:number ) => {
+            if( ndx>=items.length )
+                return;
+            const item = items[ndx];
+            log(`⏳ Calling OpenAI for #${ndx} out of ${items.length}`);
+            return openAI.chat.completions.create({
+                model : 'gpt-5',
+                messages : [{ role: "user", content: `
+You are a professional analyzer of conversations happening when a person calls a restaurant and books a table.
+Your job is to analyze conversation provided in <Conversation> section below and extract from it the date the
+caller wants a table for. All messages starting from "ConvoAgent:" come from the restaurant itself.
+<Conversation>
+${item.transcript}
+</Conversation>
+Provide your answer in JSON format as { "date":string, "time":string }.
+` }],
+            }).then( resp => {
+                let result = { date: null, time: null };
+                try {
+                    result = JSON.parse(resp.choices?.[0]?.message?.content);
+                }
+                catch(e) {
+                    log(`❌ OpenAI response for #${ndx} is not valid JSON: ${resp.choices?.[0]?.message?.content}`);
+                }
+                item.date = result.date;
+                item.time = result.time;
+                log(`✓ OpenAI responded for session at '${item.created_at}' #${ndx}/${items.length}:`,{
+                    transript : item.transcript.substring(0,100),
+                    date      : item.date,
+                    time      : item.time,
+                });
+                return getOpenAIPromise(ndx+1);
+            });
+        }
+        return getOpenAIPromise(0)
+            .then( () => {
+                return (new objToCsv(items)).toString();
+            }).catch( e => {
+                throw Error(`❌ Error calling OpenAI: ${e.message}`);
+            });
+    }
+}).then(console.log).catch(console.error);
