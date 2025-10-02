@@ -243,39 +243,44 @@ main().then( r => {
         }));
         // We are going to analyze the sessions using OpenAI
         // TODO: bundle the API calls in groups of 5 or 10 to speed things up
-        const openAI = new OpenAI({apiKey:process.env.OPENAI_API_KEY});
+        const openAI    = new OpenAI({apiKey:process.env.OPENAI_API_KEY});
+        const chunkSize = 20;
         const getOpenAIPromise = ( ndx:number ) => {
             if( ndx>=items.length )
                 return;
-            const item = items[ndx];
-            log(`⏳ Calling OpenAI for #${ndx} out of ${items.length}`);
-            return openAI.chat.completions.create({
-                model : 'gpt-5',
-                messages : [{ role: "user", content: `
-You are a professional analyzer of conversations happening when a person calls a restaurant and books a table.
-Your job is to analyze conversation provided in <Conversation> section below and extract from it the date the
-caller wants a table for. All messages starting from "ConvoAgent:" come from the restaurant itself.
-<Conversation>
-${item.transcript}
-</Conversation>
-Provide your answer in JSON format as { "date":string, "time":string }.
-` }],
-            }).then( resp => {
-                let result = { date: null, time: null };
-                try {
-                    result = JSON.parse(resp.choices?.[0]?.message?.content);
-                }
-                catch(e) {
-                    log(`❌ OpenAI response for #${ndx} is not valid JSON: ${resp.choices?.[0]?.message?.content}`);
-                }
-                item.date = result.date;
-                item.time = result.time;
-                log(`✓ OpenAI responded for session at '${item.created_at}' #${ndx}/${items.length}:`,{
-                    transript : item.transcript.substring(0,100),
-                    date      : item.date,
-                    time      : item.time,
+            const chunk = items.slice(ndx,ndx+chunkSize);
+            log(`⏳ Calling OpenAI for ${chunkSize} starting from #${ndx} '${chunk.at(0).created_at}' to '${chunk.at(-1).created_at}' out of ${items.length}`);
+            return Promise.all(chunk.map( (item) => {
+                return openAI.chat.completions.create({
+                    model : 'gpt-5',
+                    messages : [{ role: "user", content: `
+    You are a professional analyzer of conversations happening when a person calls a restaurant and books a table.
+    Your job is to analyze conversation provided in <Conversation> section below and extract from it the date the
+    caller wants a table for. All messages starting from "ConvoAgent:" come from the restaurant itself.
+    <Conversation>
+    ${item.transcript}
+    </Conversation>
+    Provide your answer in JSON format as { "date":string, "time":string }.
+    ` }],
+                }).then( resp => {
+                    let result = { date: null, time: null };
+                    try {
+                        result = JSON.parse(resp.choices?.[0]?.message?.content);
+                    }
+                    catch(e) {
+                        log(`❌ OpenAI response for #${ndx} is not valid JSON: ${resp.choices?.[0]?.message?.content}`);
+                    }
+                    return result;
                 });
-                return getOpenAIPromise(ndx+1);
+            })).then( results => {
+                log(`✓ OpenAI responded for ${chunkSize} starting from #${ndx} out of ${items.length}`,results);
+                if( results.length!==chunk.length )
+                    log(`⚠️ Warning: only ${results.length} results returned from OpenAI out of ${chunk.length} requests`);
+                for( let i=0; i<results.length; i++ ) {
+                    chunk[i].date = results[i].date;
+                    chunk[i].time = results[i].time;
+                }
+                return getOpenAIPromise(ndx+chunkSize);
             });
         }
         return getOpenAIPromise(0)
