@@ -113,8 +113,8 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
                 });
             }))));
         case 'getCustomerAttrs': {
-            const attributeIdns = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
-            const attributeNdxs = attributeIdns.reduce( (acc,idn,ndx) => {
+            const attributeIdns     = argv.attributeIdns ? argv.attributeIdns.split(',').map(s=>s.trim()).filter(s=>s.length>0) : [];
+            const attributeNdxByIdn = attributeIdns.reduce( (acc,idn,ndx) => {
                 acc[idn] = ndx;
                 return acc;
             },{} as Record<string,number>);
@@ -145,7 +145,7 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
                         })
                         .sort( (a,b) => {
                             // Sort the attributes in the order they were requested
-                            return (attributeNdxs[a.idn]||0) - (attributeNdxs[b.idn]||0);
+                            return (attributeNdxByIdn[a.idn]||0) - (attributeNdxByIdn[b.idn]||0);
                         })
                         .map( a => {
                             return {
@@ -203,9 +203,6 @@ const log = ( ...args:any ) => {
     process.stderr.write(`${dayjs().format("YYYY-MM-DD HH:mm:ss")}: `+util.format(...args)+'\n');
 }
 
-const main = async () => {
-    return getCmdPromise(argv).then(proc=>proc());
-}
 const sortIfArray = ( r:any ) => {
     if( !Array.isArray(r) )
         return r;
@@ -218,6 +215,10 @@ const sortIfArray = ( r:any ) => {
             return (left-right)*argv.sortDirection;
         return String(left).localeCompare(String(right))*argv.sortDirection;
     });
+}
+
+const main = () => {
+    return getCmdPromise(argv).then(proc=>proc());
 }
 main().then( r => {
     if( Array.isArray(r) && r.length===1 && !argv.keeparray )
