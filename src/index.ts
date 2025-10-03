@@ -233,7 +233,7 @@ main().then( r => {
             return r;
     }
     else {
-        const items = sortIfArray(r.items.filter(i=>i.arguments?.transcript).map(i=>{
+        const items = sortIfArray(r.items.filter(i=>(i.is_lead && !i.is_test && i.arguments?.transcript)).map(i=>{
             return {
                 session_id : i.id,
                 created_at : i.created_at,
@@ -242,7 +242,6 @@ main().then( r => {
             };
         }));
         // We are going to analyze the sessions using OpenAI
-        // TODO: bundle the API calls in groups of 5 or 10 to speed things up
         const openAI    = new OpenAI({apiKey:process.env.OPENAI_API_KEY});
         const chunkSize = 20;
         const getOpenAIPromise = ( ndx:number ) => {
@@ -254,13 +253,13 @@ main().then( r => {
                 return openAI.chat.completions.create({
                     model : 'gpt-5',
                     messages : [{ role: "user", content: `
-    You are a professional analyzer of conversations happening when a person calls a restaurant and books a table.
-    Your job is to analyze conversation provided in <Conversation> section below and extract from it the date the
-    caller wants a table for. All messages starting from "ConvoAgent:" come from the restaurant itself.
-    <Conversation>
-    ${item.transcript}
-    </Conversation>
-    Provide your answer in JSON format as { "date":string, "time":string }.
+You are a professional analyzer of conversations happening when a person calls a restaurant and books a table.
+Your job is to analyze conversation provided in <Conversation> section below and extract from it the date the
+caller wants a table for. All messages starting from "ConvoAgent:" come from the restaurant itself.
+<Conversation>
+${item.transcript}
+</Conversation>
+Provide your answer in JSON format as { "date":string, "time":string }.
     ` }],
                 }).then( resp => {
                     let result = { date: null, time: null };
