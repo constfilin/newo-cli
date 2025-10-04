@@ -1,11 +1,10 @@
 import util         from 'node:util';
 import path         from 'node:path';
-import fs           from 'node:fs';
 import crypto       from 'node:crypto';
 
 import dayjs        from 'dayjs';
-import dotenv       from 'dotenv'
-;
+import dotenv       from 'dotenv';
+
 import * as utils   from './utils';
 import Customer     from './Customer';
 
@@ -36,8 +35,7 @@ export class Config {
     }
     log( level:number, ...args:any[] ) {
         if( this.logLevel >= level ) {
-            // tslint:disable:no-console
-            console.log(level,`${dayjs().format("YYYY-MM-DD HH:mm:ss")}:${level}: ` + util.format(...args));
+            process.stderr.write(`${dayjs().format("YYYY-MM-DD HH:mm:ss")}: `+util.format(...args)+'\n');
         }
     }
 };
