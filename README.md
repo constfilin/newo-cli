@@ -33,24 +33,59 @@ Required environment variables:
 - `NEWO_BASE_URL` (default `https://app.newo.ai`)
 - `NEWO_API_KEYS` (your API keys from Step 1 separated by comma)
 
-## Commands
-```bash
-npm run help                               # show complete help on command line options
-npm run pullProjects                       # download all projects into ./projects/ or into NEWO_PROJECTS_DIR
-npm run listProjectMetas                   # list base information about projects for each customer
-npm run getCustomerProfile                 # list profiles of the customers
-npm run getAttributes                      # list attributes of the customers
+## Command line
 ```
-See more options in output of `npm run help` command
+NEWO CLI
 
-## API Endpoints
-- `GET /api/v1/designer/projects` - List all accessible projects
-- `GET /api/v1/designer/projects/by-id/{projectId}` - Get specific project metadata
-- `GET /api/v1/bff/agents/list?project_id=...` - List project agents
-- `GET /api/v1/designer/flows/{flowId}/skills` - List skills in flow
-- `GET /api/v1/designer/skills/{skillId}` - Get skill content
-- `PUT /api/v1/designer/flows/skills/{skillId}` - Update skill content
-- `GET /api/v1/designer/flows/{flowId}/events` - List flow events (for flows.yaml)
-- `GET /api/v1/designer/flows/{flowId}/states` - List flow states (for flows.yaml)
-- `POST /api/v1/auth/api-key/token` - Exchange API key for access tokens
-- `POST /api/v1/akb/append-manual` - Import AKB articles
+  Command line interface to NEWO. Configuration is read from environment        
+  variables or .env file.                                                       
+
+Commands
+
+  help                   Show this help message                          
+  pullProjects           Pull projects for all customers                 
+  listProjectMetas       List metadata of all projects for all customers 
+  getProject             Get details of a specific project               
+  getCustomerProfile     Get profile information for all customers       
+  getAttributes          Get customer attributes for all customers       
+  getCustomerAcctLinks   Get customer account links for all customers    
+  getSessions            Get sessions for all customers                  
+
+General options
+
+  -c, --command string          The command to execute                          
+  -s, --stringify               Format output as a JSON string                  
+  -v, --csv                     Format output as a CSV                          
+  -t, --tableColLength number   Format output as a table, truncating column     
+                                names to this length (0=off)                    
+  -k, --keepArray               If not set and the output is an array with a    
+                                single element, then outputs only this element  
+  -o, --sortColumn string       Column name to sort by if output is an array    
+  -d, --sortDirection number    Directon to sort by if output is an array (1 or 
+                                -1)                                             
+  -b, --abbreviate              Abbreviate output (means different things for   
+                                different commands)                             
+  -a, --columnNames string      Comma-separated list of columns to output,      
+                                columns will be output in this order            
+
+getProject command options
+
+  -p, --projectId string   Required. A customer can have many projects 
+
+getAttributes command options
+
+  -i, --includeHidden    Include hidden attributes, optional 
+
+getSessions command options
+
+  -f, --fromDate string      optional                                           
+  -u, --toDate string        optional                                           
+  -l, --isLead string        optional                                           
+  -e, --isTest string        optional                                           
+  -n, --connectorId string   optional                                           
+  -g, --page number          optional                                           
+  -r, --per number           optional                                           
+  -z, --openAI               If set, and if the OPENAI_API_KEY environment      
+                             variable is set, then uses OpenAI to summarize the 
+                             session transcript                                 
+```
