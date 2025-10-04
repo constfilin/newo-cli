@@ -68,7 +68,7 @@
         "pullProjects": "npx tsx ./src/index.ts pullProjects",
         "listProjectMetas": "npx tsx ./src/index.ts listProjectMetas",
         "getCustomerProfile": "npx tsx ./src/index.ts getCustomerProfile",
-        "getCustomerAttrs": "npx tsx ./src/index.ts getCustomerAttrs",
+        "getAttributes": "npx tsx ./src/index.ts getAttributes",
         "getSessions": "npx tsx ./src/index.ts getSessions -v"
     }
 }

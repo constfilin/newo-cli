@@ -68,3 +68,24 @@ export interface ProjectMeta {
 export interface Project extends ProjectMeta {
     agents                  : Agent[];
 }
+export interface Sessions {
+    metadata : {
+        page                : number,
+        per                 : number,
+        total               : number,
+    };
+    items                   : Record<string,any>[],
+}
+export interface Attributes {
+    groups                  : string[];
+    attributes              : {
+        id                  : string;
+        idn                 : string;
+        value               : string;
+        title               : string;
+        description         : string|null;
+        group               : string|null;
+        is_hidden           : boolean;
+        value_type          : string;
+    }[];
+}

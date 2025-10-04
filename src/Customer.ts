@@ -300,4 +300,27 @@ export default class Customer {
     projectStatus() {
         throw Error(`not implemented`);
     }
+    async getAttributes( argv:Record<string,boolean> ) : Promise<{
+        profile     : { id:string, idn:string, name:string, email:string },
+        groups      : string[],
+        attributes  : { idn:string, value:string }[]
+    }> {
+        if( !this.client )
+            throw new Error('Client not initialized. Call getClient() first.');
+        // Augment attributes with profile information
+        const [attrs,profile] = await Promise.all([
+            this.client.getAttributes(argv.includeHidden),
+            this.client.getCustomerProfile()
+        ]);
+        return {
+            profile : {
+                id      : profile.id,
+                idn     : profile.idn,
+                name    : profile.name,
+                email   : profile.email
+            },
+            groups      : attrs.groups,
+            attributes  : attrs.attributes
+        };
+    }
 }

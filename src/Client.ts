@@ -6,7 +6,9 @@ import {
     FlowEvent,
     Agent,
     Project,
-    ProjectMeta
+    ProjectMeta,
+    Sessions,
+    Attributes
 }                   from './Types';
 import config       from './Config';
 
@@ -133,8 +135,17 @@ export default class Client {
         delete r.data.logo;
         return r.data;
     }
-    async getCustomerAttrs( include_hidden=false ) {
+    async getAttributes( include_hidden=false ) : Promise<Attributes> {
         const r = await this.axios.get(`/api/v1/bff/customer/attributes`, { params: { include_hidden } });
+        return r.data;
+    }
+    async getSessions( argv:Record<string,any> ) : Promise<Sessions> {
+        const params = ['page','fromDate','toDate','isLead','isTest','connectorId','per'].reduce( (acc, p) => {
+            if( argv[p] )
+                acc[p] = argv[p];
+            return acc;
+        },{} as Record<string,string|boolean>);
+        const r = await this.axios.get(`/api/v1/bff/sessions`, { params });
         return r.data;
     }
     async getCustomerAcctLinks() {
@@ -161,15 +172,6 @@ export default class Client {
             //console.log({err);
             //return err;
         });
-        return r.data;
-    }
-    async getSessions( argv:Record<string,any> ) {
-        const params = ['page','fromDate','toDate','isLead','isTest','connectorId','per'].reduce( (acc, p) => {
-            if( argv[p] )
-                acc[p] = argv[p];
-            return acc;
-        },{} as Record<string,string|boolean>);
-        const r = await this.axios.get(`/api/v1/bff/sessions`, { params });
         return r.data;
     }
 }
