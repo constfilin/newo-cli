@@ -8,7 +8,6 @@ import OpenAI           from 'openai';
 
 import config           from './Config';
 import {
-    log,
     sortIfArray
 }                       from './utils';
 
@@ -80,7 +79,7 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
     await Promise.all(config.customers.map( c => {
         return c.getClient()
             .then( client => {
-                log(2, `✓ Client initialized for customer with API key ending in ...${c.apiKey.slice(-4)}`);
+                config.log(2, `✓ Client initialized for customer with API key ending in ...${c.apiKey.slice(-4)}`);
                 return client;
             })
             .catch( e => {
@@ -144,7 +143,7 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
                                 if( ndx>=r.items.length )
                                     return Promise.resolve();
                                 const chunk_items = r.items.slice(ndx,ndx+chunkSize);
-                                log(`⏳ Calling OpenAI for ${chunkSize} starting from #${ndx} '${chunk_items.at(0).created_at}' to '${chunk_items.at(-1).created_at}' out of ${r.items.length}`);
+                                config.log(2,`⏳ Calling OpenAI for ${chunkSize} starting from #${ndx} '${chunk_items.at(0).created_at}' to '${chunk_items.at(-1).created_at}' out of ${r.items.length}`);
                                 return Promise.all(
                                     chunk_items.map( (item) => {
                                         return openAI.chat.completions.create({
@@ -164,7 +163,7 @@ Provide your answer in JSON format as { "date":string, "time":string }.
                                                 result = JSON.parse(resp.choices?.[0]?.message?.content);
                                             }
                                             catch(e) {
-                                                log(`❌ OpenAI response for #${ndx} is not valid JSON: ${resp.choices?.[0]?.message?.content}`);
+                                                config.log(1,`❌ OpenAI response for #${ndx} is not valid JSON: ${resp.choices?.[0]?.message?.content}`);
                                             }
                                             item.date = result.date;
                                             item.time = result.time;
