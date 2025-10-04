@@ -88,4 +88,15 @@ getSessions command options
   -z, --openAI               If set, and if the OPENAI_API_KEY environment      
                              variable is set, then uses OpenAI to summarize the 
                              session transcript                                 
+
+Environment variables
+
+  NEWO_BASE_URL       defaults to 'https://app.newo.ai'                         
+  NEWO_PROJECTS_DIR   folder where to put projects to, defaults to ./projects   
+  NEWO_STATE_DIR      where to keep the temp auth tokens, defaults to './.newo  
+  NEWO_API_KEYS       comma separately list of secret keys identifying agents   
+                      to talk to                                                
+  LOG_LEVEL           numerical verbosity level, the higher, the chattier       
+  OPENAI_API_KEY      used with -z option to send each extracted sesson to      
+                      OpenAI for analysis, see code                             
 ```
