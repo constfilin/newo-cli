@@ -69,6 +69,17 @@ const cmdSections = [
             { name: 'per'           ,alias: 'r', type: Number    , defaultValue: 50 , description: 'optional' },
             { name: 'openAI'        ,alias: 'z', type: Boolean   , defaultValue: false, description: 'If set, and if the OPENAI_API_KEY environment variable is set, then uses OpenAI to summarize the session transcript' },
         ]
+    },
+    {
+        header  : 'Environment variables',
+        content : [
+            { var: "NEWO_BASE_URL"      , desription: "defaults to 'https://app.newo.ai'" },
+            { var: "NEWO_PROJECTS_DIR"  , desription: "folder where to put projects to, defaults to ./projects" },
+            { var: "NEWO_STATE_DIR"     , desription: "where to keep the temp auth tokens, defaults to './.newo" },
+            { var: "NEWO_API_KEYS"      , desription: "comma separately list of secret keys identifying agents to talk to" },
+            { var: "LOG_LEVEL"          , desription: "numerical verbosity level, the higher, the chattier" },
+            { var: "OPENAI_API_KEY"     , desription: "used with -z option to send each extracted sesson to OpenAI for analysis, see code" }
+        ]
     }
 ];
 
