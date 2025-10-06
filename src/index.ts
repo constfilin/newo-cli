@@ -275,8 +275,14 @@ getCmdPromise(argv)
     .then(proc=>proc())
     .then( r => {
         // Final output formatting
-        if( Array.isArray(r) && r.length===1 && !argv.keepArray )
+        if( Array.isArray(r) && r.length===1 && !argv.keepArray ) {
+            // So newo-cli can be used with many client keys at once and with one client key.
+            // In either case we want to provide a table output. In newo-cli is used with just
+            // one client key, then r is going to be an array of just one element with results
+            // for this one client. Let's unpack it to help the code below visualize the results
+            // better
             r = r[0];
+        }
         if( argv.stringify )
             return JSON.stringify(sortIfArray(r,argv.sortColumn,argv.sortDirection),null,4);
         if( argv.csv )
