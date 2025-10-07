@@ -7,9 +7,6 @@ import objToCsv         from 'objects-to-csv';
 import OpenAI           from 'openai';
 
 import config           from './Config';
-import {
-    sortIfArray
-}                       from './utils';
 
 const cmdSections = [
     {
@@ -34,7 +31,7 @@ const cmdSections = [
     {
         header : 'General options',
         optionList: [
-            { name: 'command'       ,alias: 'c', type: String    , defaultValue:'help'  ,defaultOption:true, description: "The command to execute" },
+            { name: 'command'       ,            type: String    , defaultValue:'help'  ,defaultOption:true, description: "The command to execute" },
             { name: 'stringify'     ,alias: 's', type: Boolean   , defaultValue: false  ,description: "Format output as a JSON string" },
             { name: 'csv'           ,alias: 'v', type: Boolean   , defaultValue: false  ,description: "Format output as a CSV" },
             { name: 'tableColLength',alias: 't', type: Number    , defaultValue: 0      ,description: "Format output as a table, truncating column names to this length (0=off)" },
@@ -42,7 +39,7 @@ const cmdSections = [
             { name: 'sortColumn'    ,alias: 'o', type: String    , defaultValue: ''     ,description: "Column name to sort by if output is an array" },
             { name: 'sortDirection' ,alias: 'd', type: Number    , defaultValue: 1      ,description: "Directon to sort by if output is an array (1 or -1)" },
             { name: 'abbreviate'    ,alias: 'b', type: Boolean   , defaultValue: false  ,description: "Abbreviate output (means different things for different commands)" },
-            { name: 'columnNames'   ,alias: 'a', type: String    , defaultValue: undefined , description: "Comma-separated list of columns to output, columns will be output in this order" },
+            { name: 'columnNames'   ,alias: 'c', type: String    , defaultValue: undefined , description: "Comma-separated list of columns to output, columns will be output in this order" },
         ]
     },
     {
@@ -98,10 +95,6 @@ const getCmdPromise = async ( argv:Record<string,any> ) : Promise<() => any> => 
             });
     }));
     config.log(1, `✓ Clients initialized for ${config.customers.length} customer(s)`);
-    const columnNdxByName = argv.columnNames?.split(',').map(s=>s.trim()).filter(s=>s.length>0).reduce( (acc,idn,ndx) => {
-        acc[idn] = ndx;
-        return acc;
-    },{} as Record<string,number>);
     switch( argv.command ) {
         case 'pullProjects':
             return (() => Promise.all(config.customers.map(c=>c.pullProjects())));
@@ -186,7 +179,8 @@ Provide your answer in JSON format as { "date":string, "time":string }.
                             return getOpenAIPromise(0)
                                 .then( () => {
                                     return r;
-                                }).catch( e => {
+                                })
+                                .catch( e => {
                                     throw Error(`❌ Error calling OpenAI: ${e.message}`);
                                 });
                         }));
@@ -196,68 +190,29 @@ Provide your answer in JSON format as { "date":string, "time":string }.
                             // Return raw results because the output is not csv, nor a table
                             return results;
                         }
-                        return results.map( r => {
-                            return r.items.map( i => {
-                                return Object.entries(i)
-                                    .filter( ([key,value]) => {
-                                        return (key in columnNdxByName)
-                                    })
-                                    .sort( ([key1,value1],[key2,value2]) => {
-                                        return columnNdxByName[key1]-columnNdxByName[key2];
-                                    })
-                                    .reduce( (acc,[key,value]) => {
-                                        acc[key] = value;
-                                        return acc;
-                                    },{} as Record<string,any>);
-                            });
-                        });
+                        return results.map(r=>r.items);
                     })
             );
         case 'getAttributes': {
             return (
                 () => Promise.all(config.customers.map(c=>c.getAttributes(argv)))
                     .then( results => {
-                        if( !columnNdxByName ) {
+                        if( !argv.columnNames ) {
                             // Return raw results because the output is not csv, nor a table
-                            if( argv.abreviate )
-                                return results.map(r=>r.attributes.map(a => {
-                                    return {
-                                        idn   : a.idn,
-                                        value : argv.tableColLength ? String(a.value).substring(0,argv.tableColLength) : a.value,
-                                    }
-                                }));
-                            return results;
+                            return !argv.abreviate ? results : results.map(r=>r.attributes.map(a => {
+                                return {
+                                    idn   : a.idn,
+                                    value : a.value,
+                                };
+                            }));
                         }
-                        const colNameConverter = (argv.tableColLength) ? (s:string,colNames:Record<string,any>)=> {
-                                // Truncate the attribute names but avoid colliding column names
-                                s = s.replace(/^project_/,'').replace(/^attributes_/,'').replace(/^setting_/,'').substring(0,argv.tableColLength)
-                                while( (s.length>4) && (s in colNames) )
-                                    s = s.substring(0,s.length-1);
-                                return s;
-                            } : (s:string) => {
-                                return s;
-                            };
                         return results.reduce( (acc,res) => {
-                            const line = res.attributes
-                                .filter( attr => {
-                                    return (attr.idn in columnNdxByName);
-                                })
-                                .sort( (attr1,attr2) => {
-                                    return columnNdxByName[attr1.idn]-columnNdxByName[attr2.idn];
-                                })
-                                .reduce( (acc2,attr) => {
-                                    acc2[colNameConverter(attr.idn,acc2)] = attr.value;
-                                    return acc2;
-                                },{
-                                    IDN : res.profile.idn,
-                                } as Record<string,any>);
-                            acc.push(line);
+                            acc.push(Object.fromEntries([
+                                ['IDN',res.profile.idn],
+                                ...res.attributes.map(attr=>([attr.idn,attr.value]))
+                            ]));
                             return acc;
                         },[] as Record<string,any>[]);
-                    })
-                    .then( results => {
-                        // No further processing needed
-                        return results;
                     })
             );
         }
@@ -270,26 +225,76 @@ Provide your answer in JSON format as { "date":string, "time":string }.
     });
 }
 
+export const sortIfArray = ( records:Record<string,any>[], sortColumn:string, sortDirection:number, columnNames?:string ) : Record<string,any>[] => {
+    if( !Array.isArray(records) )
+        return records;
+    if( sortColumn ) {
+        if( Array.isArray(records[0]) ) {
+            // Flatten the records and add `rndx` column
+            // @ts-expect-error
+            records = records.reduce( (acc:Record<string,any>[],record,rndx) => {
+                acc.push(...record.map( r => {
+                    return {
+                        rndx,
+                        ...r
+                    };
+                }));
+                return acc;
+            },[] as Record<string,any>[]);
+        }
+        records = records.sort( (a,b) => {
+            //console.log({a,b});
+            const left = a[sortColumn];
+            const right = b[sortColumn];
+            if( typeof left === 'number' && typeof right === 'number' )
+                return (left-right)*sortDirection;
+            return String(left).localeCompare(String(right))*sortDirection;
+        })
+    }
+    if( !argv.columnNames )
+        return records;
+    // Make sure that only given columns are in each row and they are in the specified order
+    const columnNdxByName = (argv.columnNames as String).split(',').map(s=>s.trim()).filter(s=>s.length>0).reduce( (acc,idn,ndx) => {
+        acc[idn] = ndx;
+        return acc;
+    },{} as Record<string,number>);
+    return records.map( row => {
+        return Object.fromEntries(
+            Object.entries(row).filter( ([key,value]) => {
+                return key in columnNdxByName;
+            })
+            .sort( ([key1,value1],[key2,value2]) => {
+                return columnNdxByName[key1]-columnNdxByName[key2];
+            })
+        );
+    });
+}
+
 const argv = commandLineArgs(cmdSections.map(s=>s.optionList).filter(ol=>!!ol).flat());
 getCmdPromise(argv)
     .then(proc=>proc())
-    .then( r => {
+    .then( records => {
         // Final output formatting
-        if( Array.isArray(r) && r.length===1 && !argv.keepArray ) {
+        if( Array.isArray(records) && records.length===1 && !argv.keepArray ) {
             // So newo-cli can be used with many client keys at once and with one client key.
             // In either case we want to provide a table output. In newo-cli is used with just
             // one client key, then r is going to be an array of just one element with results
             // for this one client. Let's unpack it to help the code below visualize the results
             // better
-            r = r[0];
+            records = records[0];
         }
         if( argv.stringify )
-            return JSON.stringify(sortIfArray(r,argv.sortColumn,argv.sortDirection),null,4);
+            return JSON.stringify(sortIfArray(records,argv.sortColumn,argv.sortDirection,argv.columnNames),null,4);
         if( argv.csv )
-            return (new objToCsv(Array.isArray(r)?sortIfArray(r,argv.sortColumn,argv.sortDirection):[r])).toString();
+            return (new objToCsv(Array.isArray(records)?sortIfArray(records,argv.sortColumn,argv.sortDirection,argv.columnNames):[records])).toString();
         if( argv.tableColLength>0 )
-            return consoleTable.getTable(sortIfArray(r,argv.sortColumn,argv.sortDirection));
-        return r;
+            return consoleTable.getTable(sortIfArray(records,argv.sortColumn,argv.sortDirection,argv.columnNames).map( o => {
+                return Object.fromEntries(Object.entries(o).map( ([key,value]) => {
+                    // Make sure that column widths do not exceed `tableColLength`
+                    return [key.substring(0,argv.tableColLength),((typeof value==='string')?value:JSON.stringify(value)).substring(0,argv.tableColLength)];
+                }));
+            }));
+        return records;
     })
     .then(console.log)
     .catch(console.error);

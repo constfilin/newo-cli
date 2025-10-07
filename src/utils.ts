@@ -17,16 +17,3 @@ export const enforceDirectory = ( path:string ) => {
     return path; // helpful
 }
 
-export const sortIfArray = <T extends {}>( r:T[], sortColumn:string, sortDirection:number ) : T[]=> {
-    if( !Array.isArray(r) )
-        return r;
-    if( !sortColumn )
-        return r;
-    return r.sort( (a,b) => {
-        const left = a[sortColumn];
-        const right = b[sortColumn];
-        if( typeof left === 'number' && typeof right === 'number' )
-            return (left-right)*sortDirection;
-        return String(left).localeCompare(String(right))*sortDirection;
-    });
-}
