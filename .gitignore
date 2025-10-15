@@ -85,4 +85,5 @@ yarn.lock
 pnpm-lock.yaml
 
 akb.txt
+lwpass.txt
 test-results/

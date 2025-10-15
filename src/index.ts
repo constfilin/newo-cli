@@ -1,10 +1,12 @@
 #!/usr/bin/env npx tsx
 
+import fs               from 'node:fs';
 import consoleTable     from 'console.table';
 import commandLineArgs  from 'command-line-args';
 import commandLineUsage from 'command-line-usage';
 import objToCsv         from 'objects-to-csv';
 import OpenAI           from 'openai';
+import { BigQuery }     from '@google-cloud/bigquery';
 
 import config           from './Config';
 
@@ -26,6 +28,7 @@ const cmdSections = [
             "getAttributes          Get customer attributes for all customers",
             "getCustomerAcctLinks   Get customer account links for all customers",
             "getSessions            Get sessions for all customers",
+            "bigQuery               Get results from big query"
         ]
     },
     {
@@ -216,9 +219,10 @@ Provide your answer in JSON format as { "date":string, "time":string }.
                     })
             );
         }
-        case 'getCustomerAcctLinks': {
+        case 'getCustomerAcctLinks':
             return (() => Promise.all(config.customers.map(c=>c.getCustomerAccountLinks())));
-        }
+        case 'bigQuery' :
+            return (() => Promise.reject(Error(`not ready`)));
     }
     return (() => {
         throw Error(`Unknown command: '${argv.command}'. Use '${process.argv[1]} -c help' for usage.`);
@@ -249,7 +253,7 @@ export const sortIfArray = ( records:Record<string,any>[], sortColumn:string, so
             if( typeof left === 'number' && typeof right === 'number' )
                 return (left-right)*sortDirection;
             return String(left).localeCompare(String(right))*sortDirection;
-        })
+        });
     }
     if( !argv.columnNames )
         return records;
