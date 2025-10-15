@@ -52,6 +52,7 @@ examples/
 screenshots/
 *.md
 !README.md
+!EXAMPLES.md
 
 # Log files
 logs/
